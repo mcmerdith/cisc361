@@ -1,0 +1,4 @@
+# Gitignore template for writing C code with the gcc compiler
+
+*.o
+a.out
