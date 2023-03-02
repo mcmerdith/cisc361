@@ -18,16 +18,9 @@ void sig_handler(int sig)
   prompt(1);
 }
 
-void execWhich(char *arg)
+void builtinWhich(char *arg)
 {
-  struct pathelement *p, *tmp; // pointers to our path
-  char *cmd;                   // the location of the command
-
-  printf("Executing built-in [which]\n");
-
-  p = get_path();
-
-  cmd = which(arg, p);
+  char *cmd = execWhich(arg);
 
   // Check if we found a command
   if (cmd)
@@ -38,15 +31,6 @@ void execWhich(char *arg)
   else
   {
     printf("%s: Command not found\n", arg);
-  }
-
-  // free list of path values
-  while (p)
-  {
-    tmp = p;
-    p = p->next;
-    free(tmp->element);
-    free(tmp);
   }
 }
 
@@ -86,18 +70,13 @@ int main(int argc, char **argv, char **envp)
     {
       arguments[argumentCount] = argumentParts;
       argumentCount++;
-      argumentParts = strtok(NULL, " "); // automatic loop exit? TODO
+      argumentParts = strtok(NULL, " ");
     }
     arguments[argumentCount] = (char *)NULL;
 
     // Our first argument should be the program/command. If null, we have nothing to execute
     if (arguments[0] == NULL)
       continue;
-
-    /* print tokens
-    for (i = 0; i < argumentCount; i++)
-      printf("arg[%d] = %s\n", i, arg[i]);
-    */
 
     if (strcmp(arguments[0], "pwd") == 0) // built-in command pwd
     {
@@ -115,7 +94,7 @@ int main(int argc, char **argv, char **envp)
         continue;
       }
 
-      execWhich(arguments[1]);
+      builtinWhich(arguments[1]);
     }
     else
     { // external commands
@@ -127,28 +106,28 @@ int main(int argc, char **argv, char **envp)
       { // child
         // an array of aguments for execve()
         char *execargs[MAXARGS];
-        glob_t paths;
+        glob_t globPaths;
         int csource, j;
         char **p;
 
-        execargs[j] = malloc(strlen(arguments[0]) + 1);
+        execargs[0] = malloc(strlen(arguments[0]) + 1);
         strcpy(execargs[0], arguments[0]); // copy command
         j = 1;
         for (i = 1; i < argumentCount; i++)
         { // check arguments
           if (strchr(arguments[i], '*') != NULL)
           { // wildcard!
-            csource = glob(arguments[i], 0, NULL, &paths);
+            csource = glob(arguments[i], 0, NULL, &globPaths);
             if (csource == 0)
             {
-              for (p = paths.gl_pathv; *p != NULL; ++p)
+              for (p = globPaths.gl_pathv; *p != NULL; ++p)
               {
                 execargs[j] = malloc(strlen(*p) + 1);
                 strcpy(execargs[j], *p);
                 j++;
               }
 
-              globfree(&paths);
+              globfree(&globPaths);
             }
           }
           else
@@ -161,21 +140,16 @@ int main(int argc, char **argv, char **envp)
 
         execargs[j] = NULL;
 
-        i = 0;
-        for (i = 0; i < j; i++)
-          printf("exec arg [%s]\n", execargs[i]);
-
         execve(execargs[0], execargs, NULL);
         printf("couldn't execute: %s\n", buffer);
         exit(127);
       }
       // parent
       if ((pid = waitpid(pid, &status, 0)) < 0)
-        printf("waitpid error");
-      /**
-            if (WIFEXITED(status)) // S&R p. 239
-              printf("child terminates with (%d)\n", WEXITSTATUS(status));
-      **/
+        printf("waitpid error\n");
+
+      if (WIFEXITED(status)) // S&R p. 239
+        printf("child terminates with (%d)\n", WEXITSTATUS(status));
     }
   }
 
