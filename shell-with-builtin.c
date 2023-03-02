@@ -7,72 +7,82 @@
 #include <sys/wait.h>
 #include "sh.h"
 
+void prompt(int bPrintNewline)
+{
+  fprintf(stdout, "%s>> ", bPrintNewline ? "\n" : "");
+  fflush(stdout);
+}
+
 void sig_handler(int sig)
 {
-  fprintf(stdout, "\n>> ");
-  fflush(stdout);
+  prompt(1);
 }
 
 int main(int argc, char **argv, char **envp)
 {
-  char buf[MAXLINE];
-  char *arg[MAXARGS]; // an array of tokens
-  char *ptr;
-  char *pch;
-  pid_t pid;
-  int status, i,
-      arg_no; // # of tokens in command line
+  char buffer[MAXLINE],    // temporary buffer for fgets
+      *arguments[MAXARGS], // an array of tokens
+      *temp,               // use whenever a string needs to be temporarily stored
+      *argumentParts;      // used for argument parsing
+  pid_t pid;               // pid of the executed command
+  int status,              // status of the executed command
+      i,                   // iterators and stuff
+      argumentCount;       // # of tokens in command line
 
   signal(SIGINT, sig_handler);
 
-  fprintf(stdout, ">> "); // print prompt (requires %% to print %)
-  fflush(stdout);
+  prompt(0);
 
-  while (fgets(buf, MAXLINE, stdin) != NULL)
+  while (fgets(buffer, MAXLINE, stdin) != NULL)
   {
-    if (strlen(buf) == 1 && buf[strlen(buf) - 1] == '\n')
-      goto nextprompt; // "empty" command line
+    // Print the prompt
+    prompt(0);
 
-    if (buf[strlen(buf) - 1] == '\n')
-      buf[strlen(buf) - 1] = 0; // replace newline with null
+    // Skip processing if no command was entered
+    if (strlen(buffer) == 1 && buffer[strlen(buffer) - 1] == '\n')
+      continue;
 
-    // parse command line into tokens (stored in buf)
-    arg_no = 0;
-    pch = strtok(buf, " ");
-    while (pch != NULL && arg_no < MAXARGS)
+    // Newlines will confuse the parser
+    if (buffer[strlen(buffer) - 1] == '\n')
+      buffer[strlen(buffer) - 1] = 0; // replace newline with null
+
+    // parse command line into tokens (stored in buffer)
+    argumentCount = 0;
+    argumentParts = strtok(buffer, " ");
+    while (argumentParts != NULL && argumentCount < MAXARGS)
     {
-      arg[arg_no] = pch;
-      arg_no++;
-      pch = strtok(NULL, " ");
+      arguments[argumentCount] = argumentParts;
+      argumentCount++;
+      argumentParts = strtok(NULL, " ");
     }
-    arg[arg_no] = (char *)NULL;
+    arguments[argumentCount] = (char *)NULL;
 
-    if (arg[0] == NULL) // "blank" command line with SPACES
-      goto nextprompt;
+    if (arguments[0] == NULL) // "blank" command line with SPACES
+      continue;
 
     /* print tokens
-    for (i = 0; i < arg_no; i++)
+    for (i = 0; i < argumentCount; i++)
       printf("arg[%d] = %s\n", i, arg[i]);
     */
 
-    if (strcmp(arg[0], "pwd") == 0)
+    if (strcmp(arguments[0], "pwd") == 0)
     { // built-in command pwd
       printf("Executing built-in [pwd]\n");
-      ptr = getcwd(NULL, 0);
-      printf("%s\n", ptr);
-      free(ptr); // avoid memory leak
+      temp = getcwd(NULL, 0);
+      printf("%s\n", temp);
+      free(temp); // avoid memory leak
     }
-    else if (strcmp(arg[0], "which") == 0)
+    else if (strcmp(arguments[0], "which") == 0)
     { // built-in command which
       struct pathelement *p, *tmp;
       char *cmd;
 
       printf("Executing built-in [which]\n");
 
-      if (arg[1] == NULL)
+      if (arguments[1] == NULL)
       { // "empty" which
         printf("which: Too few arguments.\n");
-        goto nextprompt;
+        continue;
       }
 
       p = get_path();
@@ -86,14 +96,14 @@ int main(int argc, char **argv, char **envp)
       }
       /***/
 
-      cmd = which(arg[1], p);
+      cmd = which(arguments[1], p);
       if (cmd)
       {
         printf("%s\n", cmd);
         free(cmd);
       }
       else // argument not found
-        printf("%s: Command not found\n", arg[1]);
+        printf("%s: Command not found\n", arguments[1]);
 
       while (p)
       { // free list of path values
@@ -117,14 +127,14 @@ int main(int argc, char **argv, char **envp)
         int csource, j;
         char **p;
 
-        execargs[j] = malloc(strlen(arg[0]) + 1);
-        strcpy(execargs[0], arg[0]); // copy command
+        execargs[j] = malloc(strlen(arguments[0]) + 1);
+        strcpy(execargs[0], arguments[0]); // copy command
         j = 1;
-        for (i = 1; i < arg_no; i++)
+        for (i = 1; i < argumentCount; i++)
         { // check arguments
-          if (strchr(arg[i], '*') != NULL)
+          if (strchr(arguments[i], '*') != NULL)
           { // wildcard!
-            csource = glob(arg[i], 0, NULL, &paths);
+            csource = glob(arguments[i], 0, NULL, &paths);
             if (csource == 0)
             {
               for (p = paths.gl_pathv; *p != NULL; ++p)
@@ -139,8 +149,8 @@ int main(int argc, char **argv, char **envp)
           }
           else
           {
-            execargs[j] = malloc(strlen(arg[i]) + 1);
-            strcpy(execargs[j], arg[i]);
+            execargs[j] = malloc(strlen(arguments[i]) + 1);
+            strcpy(execargs[j], arguments[i]);
             j++;
           }
         }
@@ -152,7 +162,7 @@ int main(int argc, char **argv, char **envp)
           printf("exec arg [%s]\n", execargs[i]);
 
         execve(execargs[0], execargs, NULL);
-        printf("couldn't execute: %s", buf);
+        printf("couldn't execute: %s", buffer);
         exit(127);
       }
       // parent
@@ -162,11 +172,9 @@ int main(int argc, char **argv, char **envp)
             if (WIFEXITED(status)) // S&R p. 239
               printf("child terminates with (%d)\n", WEXITSTATUS(status));
       **/
-    }
 
-  nextprompt:
-    fprintf(stdout, ">> ");
-    fflush(stdout);
+    nextprompt:
+    }
   }
 
   exit(0);
