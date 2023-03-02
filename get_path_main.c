@@ -6,7 +6,8 @@ main()
   struct pathelement *p;
 
   p = get_path();
-  while (p) {         // WHERE
+  while (p)
+  { // WHERE
     sprintf(cmd, "%s/gcc", p->element);
     if (access(cmd, X_OK) == 0)
       printf("[%s]\n", cmd);
@@ -16,9 +17,11 @@ main()
   printf("----------\n");
 
   p = get_path();
-  while (p) {         // WHICH
+  while (p)
+  { // WHICH
     sprintf(cmd, "%s/gcc", p->element);
-    if (access(cmd, X_OK) == 0) {
+    if (access(cmd, X_OK) == 0)
+    {
       printf("[%s]\n", cmd);
       break;
     }
