@@ -18,6 +18,38 @@ void sig_handler(int sig)
   prompt(1);
 }
 
+void execWhich(char *arg)
+{
+  struct pathelement *p, *tmp; // pointers to our path
+  char *cmd;                   // the location of the command
+
+  printf("Executing built-in [which]\n");
+
+  p = get_path();
+
+  cmd = which(arg, p);
+
+  // Check if we found a command
+  if (cmd)
+  {
+    printf("%s\n", cmd);
+    free(cmd);
+  }
+  else
+  {
+    printf("%s: Command not found\n", arg);
+  }
+
+  // free list of path values
+  while (p)
+  {
+    tmp = p;
+    p = p->next;
+    free(tmp->element);
+    free(tmp);
+  }
+}
+
 int main(int argc, char **argv, char **envp)
 {
   char buffer[MAXLINE],    // temporary buffer for fgets
@@ -31,12 +63,13 @@ int main(int argc, char **argv, char **envp)
 
   signal(SIGINT, sig_handler);
 
-  prompt(0);
-
-  while (fgets(buffer, MAXLINE, stdin) != NULL)
+  while (1)
   {
     // Print the prompt
     prompt(0);
+
+    if (fgets(buffer, MAXLINE, stdin) == NULL)
+      break;
 
     // Skip processing if no command was entered
     if (strlen(buffer) == 1 && buffer[strlen(buffer) - 1] == '\n')
@@ -53,11 +86,12 @@ int main(int argc, char **argv, char **envp)
     {
       arguments[argumentCount] = argumentParts;
       argumentCount++;
-      argumentParts = strtok(NULL, " ");
+      argumentParts = strtok(NULL, " "); // automatic loop exit? TODO
     }
     arguments[argumentCount] = (char *)NULL;
 
-    if (arguments[0] == NULL) // "blank" command line with SPACES
+    // Our first argument should be the program/command. If null, we have nothing to execute
+    if (arguments[0] == NULL)
       continue;
 
     /* print tokens
@@ -65,53 +99,23 @@ int main(int argc, char **argv, char **envp)
       printf("arg[%d] = %s\n", i, arg[i]);
     */
 
-    if (strcmp(arguments[0], "pwd") == 0)
-    { // built-in command pwd
+    if (strcmp(arguments[0], "pwd") == 0) // built-in command pwd
+    {
       printf("Executing built-in [pwd]\n");
       temp = getcwd(NULL, 0);
       printf("%s\n", temp);
       free(temp); // avoid memory leak
     }
-    else if (strcmp(arguments[0], "which") == 0)
-    { // built-in command which
-      struct pathelement *p, *tmp;
-      char *cmd;
-
-      printf("Executing built-in [which]\n");
-
+    else if (strcmp(arguments[0], "which") == 0) // built-in command which
+    {
+      // which needs a command to find
       if (arguments[1] == NULL)
-      { // "empty" which
+      {
         printf("which: Too few arguments.\n");
         continue;
       }
 
-      p = get_path();
-
-      /***/
-      tmp = p;
-      while (tmp)
-      { // print list of paths
-        printf("path [%s]\n", tmp->element);
-        tmp = tmp->next;
-      }
-      /***/
-
-      cmd = which(arguments[1], p);
-      if (cmd)
-      {
-        printf("%s\n", cmd);
-        free(cmd);
-      }
-      else // argument not found
-        printf("%s: Command not found\n", arguments[1]);
-
-      while (p)
-      { // free list of path values
-        tmp = p;
-        p = p->next;
-        free(tmp->element);
-        free(tmp);
-      }
+      execWhich(arguments[1]);
     }
     else
     { // external commands
@@ -162,7 +166,7 @@ int main(int argc, char **argv, char **envp)
           printf("exec arg [%s]\n", execargs[i]);
 
         execve(execargs[0], execargs, NULL);
-        printf("couldn't execute: %s", buffer);
+        printf("couldn't execute: %s\n", buffer);
         exit(127);
       }
       // parent
@@ -172,10 +176,8 @@ int main(int argc, char **argv, char **envp)
             if (WIFEXITED(status)) // S&R p. 239
               printf("child terminates with (%d)\n", WEXITSTATUS(status));
       **/
-
-    nextprompt:
     }
   }
 
-  exit(0);
+  return 0;
 }
