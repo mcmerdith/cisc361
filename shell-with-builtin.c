@@ -140,7 +140,23 @@ int main(int argc, char **argv, char **envp)
 
         execargs[j] = NULL;
 
-        execve(execargs[0], execargs, NULL);
+        // Check if the command to execute actually exists
+        if (access(execargs[0], X_OK) != 0)
+        {
+          // if not, try to find it
+          temp = execWhich(execargs[0]);
+          if (temp)
+          {
+            execargs[0] = temp;
+          }
+          else
+          {
+            printf("%s: Command not found\n", execargs[0]);
+            exit(127);
+          }
+        }
+
+        execve(execargs[0], execargs, NULL); // if execution succeeds, child process stops here
         printf("couldn't execute: %s\n", buffer);
         exit(127);
       }
