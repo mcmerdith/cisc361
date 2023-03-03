@@ -34,6 +34,7 @@ int main(int argc, char **argv, char **envp)
       argumentCount;       // # of tokens in command line
 
   signal(SIGINT, sig_handler);
+  setup_builtins();
 
   while (1)
   {
@@ -66,7 +67,7 @@ int main(int argc, char **argv, char **envp)
     if (arguments[0] == NULL)
       continue;
 
-    if (processBuiltins(arguments))
+    if (try_exec_builtin(arguments))
     {
       continue;
     }
@@ -118,7 +119,7 @@ int main(int argc, char **argv, char **envp)
         if (access(execargs[0], X_OK) != 0)
         {
           // if not, try to find it
-          temp = execWhich(execargs[0]);
+          temp = exec_which(execargs[0]);
           if (temp)
           {
             execargs[0] = temp;

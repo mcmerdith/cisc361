@@ -40,7 +40,7 @@ char *which(char *command, struct pathelement *p, int bIsWhere)
 }
 
 // Execute the `which` command, returning the path or NULL if not found. Caller must free the returned path
-char *execWhich(char *arg)
+char *exec_which(char *arg)
 {
   struct pathelement *p = get_path(), // the first node of the path linked list
       *tmp;                           // pointers to our path
