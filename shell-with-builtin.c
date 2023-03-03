@@ -1,37 +1,16 @@
-#include <unistd.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <signal.h>
-#include <glob.h>
-#include <sys/wait.h>
 #include "sh.h"
 
 void prompt(int bPrintNewline)
 {
-  fprintf(stdout, "%s>> ", bPrintNewline ? "\n" : "");
+  char *cwd = getcwd(NULL, 0);
+  fprintf(stdout, "%s%s >> ", cwd, bPrintNewline ? "\n" : "");
+  free(cwd);
   fflush(stdout);
 }
 
 void sig_handler(int sig)
 {
   prompt(1);
-}
-
-void builtinWhich(char *arg)
-{
-  char *cmd = execWhich(arg);
-
-  // Check if we found a command
-  if (cmd)
-  {
-    printf("%s\n", cmd);
-    free(cmd);
-  }
-  else
-  {
-    printf("%s: Command not found\n", arg);
-  }
 }
 
 int main(int argc, char **argv, char **envp)
@@ -78,23 +57,9 @@ int main(int argc, char **argv, char **envp)
     if (arguments[0] == NULL)
       continue;
 
-    if (strcmp(arguments[0], "pwd") == 0) // built-in command pwd
+    if (processBuiltins(arguments))
     {
-      printf("Executing built-in [pwd]\n");
-      temp = getcwd(NULL, 0);
-      printf("%s\n", temp);
-      free(temp); // avoid memory leak
-    }
-    else if (strcmp(arguments[0], "which") == 0) // built-in command which
-    {
-      // which needs a command to find
-      if (arguments[1] == NULL)
-      {
-        printf("which: Too few arguments.\n");
-        continue;
-      }
-
-      builtinWhich(arguments[1]);
+      continue;
     }
     else
     { // external commands
