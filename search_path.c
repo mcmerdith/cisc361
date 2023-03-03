@@ -1,4 +1,9 @@
-#include "sh.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <string.h>
+#include "search_path.h"
+
 #define PATHLEN 128
 
 char *which(char *command, struct pathelement *p, int bIsWhere)

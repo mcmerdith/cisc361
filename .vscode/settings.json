@@ -1,3 +1,12 @@
 {
   "editor.defaultFormatter": "ms-vscode.cpptools",
+  "C_Cpp.default.configurationProvider": "ms-vscode.makefile-tools",
+  "files.associations": {
+    "stdlib.h": "c",
+    "stddef.h": "c",
+    "search_path.h": "c",
+    "shell-builtins.h": "c",
+    "string.h": "c",
+    "unistd.h": "c"
+  },
 }

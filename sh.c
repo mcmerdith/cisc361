@@ -1,9 +1,18 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <string.h>
+#include <glob.h>
+#include <sys/wait.h>
+#include <signal.h>
 #include "sh.h"
+#include "shell-builtins.h"
+#include "search_path.h"
 
 void prompt(int bPrintNewline)
 {
   char *cwd = getcwd(NULL, 0);
-  fprintf(stdout, "%s%s >> ", cwd, bPrintNewline ? "\n" : "");
+  fprintf(stdout, "%s%s >> ", bPrintNewline ? "\n" : "", cwd);
   free(cwd);
   fflush(stdout);
 }
@@ -125,12 +134,10 @@ int main(int argc, char **argv, char **envp)
         printf("couldn't execute: %s\n", buffer);
         exit(127);
       }
+
       // parent
       if ((pid = waitpid(pid, &status, 0)) < 0)
         printf("waitpid error\n");
-
-      if (WIFEXITED(status)) // S&R p. 239
-        printf("child terminates with (%d)\n", WEXITSTATUS(status));
     }
   }
 

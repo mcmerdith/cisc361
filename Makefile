@@ -1,20 +1,20 @@
 CC=gcc
 # CC=gcc -Wall
 
-mysh: shell-with-builtin.o shell-builtins.o get_path.o which.o
-	$(CC) -g shell-with-builtin.o shell-builtins.o get_path.o which.o -o mysh
+mysh: sh.o shell-builtins.o get_path.o search_path.o
+	$(CC) -g sh.o shell-builtins.o get_path.o search_path.o -o mysh
 
-shell-with-builtin.o: shell-with-builtin.c sh.h
-	$(CC) -g -c shell-with-builtin.c
+sh.o: sh.c sh.h shell-builtins.h search_path.h
+	$(CC) -g -c sh.c
 
-shell-builtins.o: shell-builtins.c sh.h
+shell-builtins.o: shell-builtins.c shell-builtins.h search_path.h
 	$(CC) -g -c shell-builtins.c
 
 get_path.o: get_path.c get_path.h
 	$(CC) -g -c get_path.c
 
-which.o: which.c get_path.h
-	$(CC) -g -c which.c
+search_path.o: search_path.c search_path.h get_path.h
+	$(CC) -g -c search_path.c
 
 clean:
 	rm -rf *.o mysh

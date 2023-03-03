@@ -1,20 +1,9 @@
-#include "sh.h"
-
-void builtinWhich(char *arg)
-{
-    char *cmd = execWhich(arg);
-
-    // Check if we found a command
-    if (cmd)
-    {
-        printf("%s\n", cmd);
-        free(cmd);
-    }
-    else
-    {
-        printf("%s: Command not found\n", arg);
-    }
-}
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <string.h>
+#include "shell-builtins.h"
+#include "search_path.h"
 
 int processBuiltins(char *arguments[])
 {
@@ -36,7 +25,19 @@ int processBuiltins(char *arguments[])
             return 1;
         }
 
-        builtinWhich(arguments[1]);
+        char *cmd = execWhich(arguments[1]);
+
+        // Check if we found a command
+        if (cmd)
+        {
+            printf("%s\n", cmd);
+            free(cmd);
+        }
+        else
+        {
+            printf("%s: Command not found\n", arguments[1]);
+        }
+
         return 1;
     }
 

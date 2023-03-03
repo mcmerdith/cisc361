@@ -1,12 +1,10 @@
+#pragma once
+
 /*
   get_path.h
   Ben Miller
 
 */
-#include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <string.h>
 
 struct pathelement
 {
