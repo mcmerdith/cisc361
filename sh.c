@@ -6,7 +6,7 @@
 #include <sys/wait.h>
 #include <signal.h>
 #include "sh.h"
-#include "shell-builtins.h"
+#include "shell_builtins.h"
 #include "search_path.h"
 
 void prompt(int bPrintNewline)

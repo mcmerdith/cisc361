@@ -2,8 +2,13 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
-#include "shell-builtins.h"
+#include "shell_builtins.h"
 #include "search_path.h"
+
+void _printStatus(char *command)
+{
+    printf("Executing built-in command [%s]", command);
+}
 
 int processBuiltins(char *arguments[])
 {

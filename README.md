@@ -4,10 +4,17 @@
 
 ## Built-in commands
 
-1. which
-2. where \[WIP\]
-3. ls
-4. pwd
+1. exit
+2. which
+3. where \[WIP\]
+4. cd
+5. pwd
+6. list
+7. pid
+8. kill
+9. prompt
+10. printenv
+11. setenv
 
 ## External commands
 
