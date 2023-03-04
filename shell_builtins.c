@@ -7,6 +7,9 @@
 
 struct shell_builtin *builtins;
 
+#pragma region Executors
+
+// print the current working directory
 void _pwd(char *arguments[])
 {
     char *temp = getcwd(NULL, 0);
@@ -14,6 +17,7 @@ void _pwd(char *arguments[])
     free(temp); // avoid memory leak
 }
 
+// print the executable path matching arguments[1]
 void _which(char *arguments[])
 {
     // which needs a command to find
@@ -37,12 +41,36 @@ void _which(char *arguments[])
     }
 }
 
+// print all executable paths matching arguments[1]
+void _where(char *arguments[])
+{
+    _which(arguments); // TODO
+}
+
+// exit the shell
+void _exit_cmd(char *arguments[])
+{
+    exit(0);
+}
+
+#pragma endregion
+
+#pragma region Memory Management for linked -list
+
+// allocate memory for a builtin
+struct shell_builtin *_new_builtin()
+{
+    return malloc(sizeof(struct shell_builtin));
+}
+
+// allocate and populate a linked-list of builtins
 void setup_builtins()
 {
     struct shell_builtin
-        *pwd,
-        *which,
-        *where;
+        *pwd = _new_builtin(),
+        *which = _new_builtin(),
+        *where = _new_builtin(),
+        *exit = _new_builtin();
 
     // Create elements
     pwd->command = "pwd";
@@ -51,15 +79,37 @@ void setup_builtins()
     which->executor = &_which;
     where->command = "where";
     where->executor = &_which;
+    exit->command = "exit";
+    exit->executor = &_exit_cmd;
 
     // Link the list
     pwd->next = which;
     which->next = where;
-    where->next = NULL;
+    where->next = exit;
+    exit->next = NULL;
 
     // update head
     builtins = pwd;
 }
+
+// Free the linked-list of builtins
+void cleanup_builtins()
+{
+    struct shell_builtin
+        *current = builtins,
+        *temp;
+
+    // free each element of the linked-list
+    while (current != NULL)
+    {
+        temp = current;
+        current = current->next;
+        free(temp->command);
+        free(temp);
+    }
+}
+
+#pragma endregion
 
 int try_exec_builtin(char *arguments[])
 {
@@ -69,7 +119,10 @@ int try_exec_builtin(char *arguments[])
     while (current != NULL)
     {
         if (strcmp(current->command, arguments[0]) != 0)
+        {
+            current = current->next;
             continue;
+        }
 
         PrintStatus(arguments[0]);
 

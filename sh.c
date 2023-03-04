@@ -1,18 +1,18 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <unistd.h>
 #include <string.h>
-#include <glob.h>
+#include <unistd.h>
 #include <sys/wait.h>
 #include <signal.h>
 #include "sh.h"
 #include "shell_builtins.h"
+#include "shell_externals.h"
 #include "search_path.h"
 
 void prompt(int bPrintNewline)
 {
   char *cwd = getcwd(NULL, 0);
-  fprintf(stdout, "%s%s >> ", bPrintNewline ? "\n" : "", cwd);
+  fprintf(stdout, "%s%s  msh > ", bPrintNewline ? "\n" : "", cwd);
   free(cwd);
   fflush(stdout);
 }
@@ -26,6 +26,7 @@ int main(int argc, char **argv, char **envp)
 {
   char buffer[MAXLINE],    // temporary buffer for fgets
       *arguments[MAXARGS], // an array of tokens
+      **execargs,          // args for execve
       *temp,               // use whenever a string needs to be temporarily stored
       *argumentParts;      // used for argument parsing
   pid_t pid;               // pid of the executed command
@@ -34,6 +35,7 @@ int main(int argc, char **argv, char **envp)
       argumentCount;       // # of tokens in command line
 
   signal(SIGINT, sig_handler);
+
   setup_builtins();
 
   while (1)
@@ -42,7 +44,15 @@ int main(int argc, char **argv, char **envp)
     prompt(0);
 
     if (fgets(buffer, MAXLINE, stdin) == NULL)
-      break;
+    {
+      printf("\nUse \"exit\" to exit msh\n");
+
+      // Dispose of the EOF in the fgets buffer
+      ungetc(1, stdin);
+      getc(stdin);
+
+      continue;
+    }
 
     // Skip processing if no command was entered
     if (strlen(buffer) == 1 && buffer[strlen(buffer) - 1] == '\n')
@@ -73,64 +83,13 @@ int main(int argc, char **argv, char **envp)
     }
     else
     { // external commands
+      execargs = process_external(arguments);
       if ((pid = fork()) < 0)
       {
-        printf("fork error");
+        printf("Failed to execute: fork error\n");
       }
       else if (pid == 0)
-      { // child
-        // an array of aguments for execve()
-        char *execargs[MAXARGS];
-        glob_t globPaths;
-        int csource, j;
-        char **p;
-
-        execargs[0] = malloc(strlen(arguments[0]) + 1);
-        strcpy(execargs[0], arguments[0]); // copy command
-        j = 1;
-        for (i = 1; i < argumentCount; i++)
-        { // check arguments
-          if (strchr(arguments[i], '*') != NULL)
-          { // wildcard!
-            csource = glob(arguments[i], 0, NULL, &globPaths);
-            if (csource == 0)
-            {
-              for (p = globPaths.gl_pathv; *p != NULL; ++p)
-              {
-                execargs[j] = malloc(strlen(*p) + 1);
-                strcpy(execargs[j], *p);
-                j++;
-              }
-
-              globfree(&globPaths);
-            }
-          }
-          else
-          {
-            execargs[j] = malloc(strlen(arguments[i]) + 1);
-            strcpy(execargs[j], arguments[i]);
-            j++;
-          }
-        }
-
-        execargs[j] = NULL;
-
-        // Check if the command to execute actually exists
-        if (access(execargs[0], X_OK) != 0)
-        {
-          // if not, try to find it
-          temp = exec_which(execargs[0]);
-          if (temp)
-          {
-            execargs[0] = temp;
-          }
-          else
-          {
-            printf("%s: Command not found\n", execargs[0]);
-            exit(127);
-          }
-        }
-
+      {                                      // child
         execve(execargs[0], execargs, NULL); // if execution succeeds, child process stops here
         printf("couldn't execute: %s\n", buffer);
         exit(127);
@@ -141,6 +100,8 @@ int main(int argc, char **argv, char **envp)
         printf("waitpid error\n");
     }
   }
+
+  cleanup_builtins();
 
   return 0;
 }
