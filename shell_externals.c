@@ -8,30 +8,28 @@
 
 // expand wildcards in arguments into out_execargs.
 // returns a pointer to a NULl terminated array
-char **process_external(char *arguments[])
+int process_n_externals(char *arguments[], char ***out_execargs, int max_args)
 {
-    printf("Executing external command [%s]\n", arguments[0]);
-
-    char **execargs = malloc((MAXARGS + 1) * sizeof(char *)); // Allocate an array one larger to accommodate the NULL terminator
+    char **execargs = *out_execargs;
 
     glob_t globPaths; // an array of aguments for execve()
     int csource,      // result of glob
-        j;            // current execargs index
+        i, j;         // current arguments and execargs index
     char **p,         // pointer to current glob item
-        current;      // The current argument being processed
+        *current;     // The current argument being processed
 
     execargs[0] = malloc(strlen(arguments[0]) + 1); // first arg is progrma name
     strcpy(execargs[0], arguments[0]);              // copy command
 
     j = 1;
-    for (int i = 1; j < MAXARGS && (current = arguments[i]) != NULL; i++)
+    for (i = 1; j < max_args && (current = arguments[i]) != NULL; i++)
     { // check arguments
         if (strchr(current, '*') != NULL)
         { // wildcard!
             csource = glob(current, 0, NULL, &globPaths);
             if (csource == 0)
             {
-                for (p = globPaths.gl_pathv; j < MAXARGS && *p != NULL; ++p)
+                for (p = globPaths.gl_pathv; j < max_args && *p != NULL; ++p)
                 {
                     execargs[j] = malloc(strlen(*p) + 1);
                     strcpy(execargs[j], *p);
@@ -65,6 +63,9 @@ char **process_external(char *arguments[])
         else
         {
             printf("%s: Command not found\n", execargs[0]);
+            return 0;
         }
     }
+
+    return 1;
 }

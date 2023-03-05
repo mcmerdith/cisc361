@@ -1,3 +1,5 @@
+#define __USE_POSIX
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -12,7 +14,7 @@
 void prompt(int bPrintNewline)
 {
   char *cwd = getcwd(NULL, 0);
-  fprintf(stdout, "%s%s  msh > ", bPrintNewline ? "\n" : "", cwd);
+  printf("%s%s  msh > ", bPrintNewline ? "\n" : "", cwd);
   free(cwd);
   fflush(stdout);
 }
@@ -20,6 +22,7 @@ void prompt(int bPrintNewline)
 void sig_handler(int sig)
 {
   prompt(1);
+  // printf("%d", getchar());
 }
 
 int main(int argc, char **argv, char **envp)
@@ -34,9 +37,16 @@ int main(int argc, char **argv, char **envp)
       i,                   // iterators and stuff
       argumentCount;       // # of tokens in command line
 
-  signal(SIGINT, sig_handler);
+  struct sigaction action;
+  action.sa_handler = sig_handler;
+  action.sa_flags = SA_RESTART;
+
+  sigaction(SIGINT, &action, NULL);
+  sigaction(SIGTSTP, &action, NULL);
 
   setup_builtins();
+
+  execargs = malloc((MAXARGS + 1) * sizeof(char *)); // Allocate an array one larger to accommodate the NULL terminator,
 
   while (1)
   {
@@ -47,10 +57,8 @@ int main(int argc, char **argv, char **envp)
     {
       printf("\nUse \"exit\" to exit msh\n");
 
-      // Dispose of the EOF in the fgets buffer
-      ungetc(1, stdin);
-      getc(stdin);
-
+      // Clear the error
+      clearerr(stdin);
       continue;
     }
 
@@ -81,15 +89,15 @@ int main(int argc, char **argv, char **envp)
     {
       continue;
     }
-    else
+    else if (process_n_externals(arguments, &execargs, MAXARGS))
     { // external commands
-      execargs = process_external(arguments);
       if ((pid = fork()) < 0)
       {
         printf("Failed to execute: fork error\n");
       }
       else if (pid == 0)
-      {                                      // child
+      { // child
+        printf("Executing [%s]\n", execargs[0]);
         execve(execargs[0], execargs, NULL); // if execution succeeds, child process stops here
         printf("couldn't execute: %s\n", buffer);
         exit(127);
@@ -98,6 +106,9 @@ int main(int argc, char **argv, char **envp)
       // parent
       if ((pid = waitpid(pid, &status, 0)) < 0)
         printf("waitpid error\n");
+
+      if (WIFEXITED(status)) // S&R p. 239
+        printf("child terminates with (%d)\n", WEXITSTATUS(status));
     }
   }
 
