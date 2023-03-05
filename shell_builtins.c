@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdarg.h>
 #include "shell_builtins.h"
 #include "search_path.h"
 
@@ -11,16 +12,14 @@ extern char *prompt_prefix;
 
 #pragma region Executors
 
-// print the current working directory
-void _pwd(char *arguments[])
+// exit the shell
+void _exit_cmd(char *arguments[])
 {
-    char *temp = getcwd(NULL, 0);
-    printf("%s\n", temp);
-    free(temp); // avoid memory leak
+    exit(0);
 }
 
 // print the executable path matching arguments[1]
-void _which(char *arguments[])
+void _which_cmd(char *arguments[])
 {
     // which needs a command to find
     if (arguments[1] == NULL)
@@ -44,7 +43,7 @@ void _which(char *arguments[])
 }
 
 // print all executable paths matching arguments[1]
-void _where(char *arguments[])
+void _where_cmd(char *arguments[])
 {
     // which needs a command to find
     if (arguments[1] == NULL)
@@ -56,10 +55,36 @@ void _where(char *arguments[])
     exec_where(arguments[1]);
 }
 
-// exit the shell
-void _exit_cmd(char *arguments[])
+// change the shell working directory
+void _chdir_cmd(char *arguments[])
 {
-    exit(0);
+    printf("%s: Not implemented", arguments[1]);
+}
+
+// print the current working directory
+void _pwd_cmd(char *arguments[])
+{
+    char *temp = getcwd(NULL, 0);
+    printf("%s\n", temp);
+    free(temp); // avoid memory leak
+}
+
+// change the shell working directory
+void _list_cmd(char *arguments[])
+{
+    printf("%s: Not implemented", arguments[1]);
+}
+
+// change the shell working directory
+void _pid_cmd(char *arguments[])
+{
+    printf("%s: Not implemented", arguments[1]);
+}
+
+// change the shell working directory
+void _kill_cmd(char *arguments[])
+{
+    printf("%s: Not implemented", arguments[1]);
 }
 
 // update the shell prompt prefix
@@ -90,44 +115,60 @@ void _prompt_cmd(char *arguments[])
     prompt_prefix = dest;
 }
 
+// change the shell working directory
+void _printenv_cmd(char *arguments[])
+{
+    printf("%s: Not implemented", arguments[1]);
+}
+
+// change the shell working directory
+void _setenv_cmd(char *arguments[])
+{
+    printf("%s: Not implemented", arguments[1]);
+}
+
 #pragma endregion
 
-#pragma region Memory Management for linked -list
+#pragma region Memory Management for linkedlist
 
 // allocate memory for a builtin
-struct shell_builtin *_new_builtin()
+inline struct shell_builtin *new_builtin(char *command, builtin_executor executor)
 {
-    return malloc(sizeof(struct shell_builtin));
+    struct shell_builtin *new_builtin = malloc(sizeof(struct shell_builtin));
+    new_builtin->command = command;
+    new_builtin->executor = executor;
+    return new_builtin;
+}
+
+// link some builtins together
+void link_builtins(struct shell_builtin *head, ...)
+{
+    va_list argp;
+    va_start(argp, head);
+
+    struct shell_builtin *current = head,
+                         *previous;
+
+    while (current != NULL)
+    {
+        previous = current;
+        current = va_arg(argp, struct shell_builtin *);
+        previous->next = current;
+    }
 }
 
 // allocate and populate a linked-list of builtins
 void setup_builtins()
 {
     struct shell_builtin
-        *pwd = _new_builtin(),
-        *which = _new_builtin(),
-        *where = _new_builtin(),
-        *exit = _new_builtin(),
-        *prompt = _new_builtin();
-
-    // Create elements
-    pwd->command = "pwd";
-    pwd->executor = &_pwd;
-    which->command = "which";
-    which->executor = &_which;
-    where->command = "where";
-    where->executor = &_where;
-    exit->command = "exit";
-    exit->executor = &_exit_cmd;
-    prompt->command = "prompt";
-    prompt->executor = &_prompt_cmd;
+        *pwd = new_builtin("pwd", &_pwd_cmd),
+        *which = new_builtin("which", &_which_cmd),
+        *where = new_builtin("where", &_where_cmd),
+        *exit = new_builtin("exit", &_exit_cmd),
+        *prompt = new_builtin("prompt", &_prompt_cmd);
 
     // Link the list
-    pwd->next = which;
-    which->next = where;
-    where->next = exit;
-    exit->next = prompt;
-    prompt->next = NULL;
+    link_builtins(pwd, which, where, exit, prompt);
 
     // update head
     builtins = pwd;

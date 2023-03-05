@@ -7,10 +7,10 @@
 #include "search_path.h"
 
 // expand wildcards in arguments into out_execargs.
-// returns a pointer to a NULl terminated array
-int process_n_externals(char *arguments[], char ***out_execargs, int max_args)
+// returns a pointer to a NULL terminated array with at most MAX_ARGS elements including the NULL-terminator
+int expand_wildcards(char *arguments[], char *execargs[], int max_args)
 {
-    char **execargs = *out_execargs;
+    // char **execargs = *out_execargs;
 
     glob_t globPaths; // an array of aguments for execve()
     int csource,      // result of glob
@@ -22,14 +22,14 @@ int process_n_externals(char *arguments[], char ***out_execargs, int max_args)
     strcpy(execargs[0], arguments[0]);              // copy command
 
     j = 1;
-    for (i = 1; j < max_args && (current = arguments[i]) != NULL; i++)
+    for (i = 1; j < max_args - 1 && (current = arguments[i]) != NULL; i++)
     { // check arguments
         if (strchr(current, '*') != NULL)
         { // wildcard!
             csource = glob(current, 0, NULL, &globPaths);
             if (csource == 0)
             {
-                for (p = globPaths.gl_pathv; j < max_args && *p != NULL; ++p)
+                for (p = globPaths.gl_pathv; j < max_args - 1 && *p != NULL; ++p)
                 {
                     execargs[j] = malloc(strlen(*p) + 1);
                     strcpy(execargs[j], *p);
@@ -58,7 +58,8 @@ int process_n_externals(char *arguments[], char ***out_execargs, int max_args)
 
         if (temp)
         {
-            execargs[0] = temp;
+            free(execargs[0]);  // cleanup the old arg
+            execargs[0] = temp; // assign the new one
         }
         else
         {

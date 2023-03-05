@@ -36,7 +36,6 @@ int main(int argc, char **argv, char **envp)
 {
   char buffer[MAXLINE],    // temporary buffer for fgets
       *arguments[MAXARGS], // an array of tokens
-      **execargs,          // args for execve
       *temp,               // use whenever a string needs to be temporarily stored
       *argumentParts;      // used for argument parsing
   pid_t pid;               // pid of the executed command
@@ -53,8 +52,6 @@ int main(int argc, char **argv, char **envp)
   sigaction(SIGTSTP, &action, NULL);
 
   setup_builtins();
-
-  execargs = malloc((MAXARGS + 1) * sizeof(char *)); // Allocate an array one larger to accommodate the NULL terminator,
 
   while (1)
   {
@@ -97,14 +94,16 @@ int main(int argc, char **argv, char **envp)
     {
       continue;
     }
-    else if (process_n_externals(arguments, &execargs, MAXARGS))
+    else
     { // external commands
       if ((pid = fork()) < 0)
       {
         printf("Failed to execute: fork error\n");
       }
-      else if (pid == 0)
-      { // child
+      else if (pid == 0) // child
+      {
+        char *execargs[MAXARGS]; // args for execve
+        expand_wildcards(arguments, execargs, MAXARGS);
         printf("Executing [%s]\n", execargs[0]);
         execve(execargs[0], execargs, NULL); // if execution succeeds, child process stops here
         printf("couldn't execute: %s\n", buffer);
