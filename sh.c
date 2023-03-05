@@ -11,10 +11,17 @@
 #include "shell_externals.h"
 #include "search_path.h"
 
+char *prompt_prefix = NULL;
+
 void prompt(int bPrintNewline)
 {
   char *cwd = getcwd(NULL, 0);
-  printf("%s%s  msh > ", bPrintNewline ? "\n" : "", cwd);
+  if (bPrintNewline)
+    printf("\n");
+  if (prompt_prefix)
+    printf("%s ", prompt_prefix);
+
+  printf("[%s] msh > ", cwd);
   free(cwd);
   fflush(stdout);
 }

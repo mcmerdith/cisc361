@@ -7,6 +7,8 @@
 
 struct shell_builtin *builtins;
 
+extern char *prompt_prefix;
+
 #pragma region Executors
 
 // print the current working directory
@@ -23,7 +25,7 @@ void _which(char *arguments[])
     // which needs a command to find
     if (arguments[1] == NULL)
     {
-        printf("which: Too few arguments.\n");
+        TooFewArgs("which");
         return;
     }
 
@@ -47,7 +49,7 @@ void _where(char *arguments[])
     // which needs a command to find
     if (arguments[1] == NULL)
     {
-        printf("where: Too few arguments.\n");
+        TooFewArgs("where");
         return;
     }
 
@@ -58,6 +60,34 @@ void _where(char *arguments[])
 void _exit_cmd(char *arguments[])
 {
     exit(0);
+}
+
+// update the shell prompt prefix
+void _prompt_cmd(char *arguments[])
+{
+    if (arguments[1] == NULL)
+    {
+        TooFewArgs("prompt");
+        return;
+    }
+
+    // rejoin the arguments
+
+    char *dest = malloc(sizeof(char) * (strlen(arguments[1]) + 1)), *temp;
+    strcpy(dest, arguments[1]);
+    for (char **p = &arguments[2]; *p != NULL; ++p)
+    {
+        temp = malloc(sizeof(char) * (strlen(dest) + strlen(*p) + 2)); // allocate a buffer to do the joining
+        // sprintf(temp, "%s %s", dest, *p);
+        strcpy(temp, dest); // copy the current string into temp;
+        strcat(temp, " ");  // space
+        strcat(temp, *p);   // new segment
+        free(dest);         // free previous segment
+        dest = temp;        // update new segment
+    }
+
+    free(prompt_prefix);
+    prompt_prefix = dest;
 }
 
 #pragma endregion
@@ -77,7 +107,8 @@ void setup_builtins()
         *pwd = _new_builtin(),
         *which = _new_builtin(),
         *where = _new_builtin(),
-        *exit = _new_builtin();
+        *exit = _new_builtin(),
+        *prompt = _new_builtin();
 
     // Create elements
     pwd->command = "pwd";
@@ -88,12 +119,15 @@ void setup_builtins()
     where->executor = &_where;
     exit->command = "exit";
     exit->executor = &_exit_cmd;
+    prompt->command = "prompt";
+    prompt->executor = &_prompt_cmd;
 
     // Link the list
     pwd->next = which;
     which->next = where;
     where->next = exit;
-    exit->next = NULL;
+    exit->next = prompt;
+    prompt->next = NULL;
 
     // update head
     builtins = pwd;

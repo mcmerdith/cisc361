@@ -1,6 +1,7 @@
 #pragma once
 
 #define PrintStatus(command) printf("Executing built-in command [%s]\n", command)
+#define TooFewArgs(command) printf("%s: Too few arguments.\n", command)
 
 typedef void (*builtin_executor)(char *[]);
 
