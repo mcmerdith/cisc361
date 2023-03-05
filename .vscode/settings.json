@@ -1,6 +1,13 @@
 {
   "editor.defaultFormatter": "ms-vscode.cpptools",
   "files.associations": {
-    "signal.h": "c"
-  },
+    "signal.h": "c",
+    "sigaction.h": "c",
+    "search_path.h": "c",
+    "sh.h": "c",
+    "unistd.h": "c",
+    "stdlib.h": "c",
+    "string.h": "c",
+    "wait.h": "c"
+  }
 }
