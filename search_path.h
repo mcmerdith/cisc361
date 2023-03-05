@@ -3,5 +3,6 @@
 #include "get_path.h"
 
 char *exec_which(char *arg);
-char *exec_where(char *arg);
-char *which(char *command, struct pathelement *p, int bIsWhere);
+void exec_where(char *arg);
+char *path_search(char *command, struct pathelement *p, int bPrintOrReturn);
+void free_path(struct pathelement *p);

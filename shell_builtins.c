@@ -44,7 +44,14 @@ void _which(char *arguments[])
 // print all executable paths matching arguments[1]
 void _where(char *arguments[])
 {
-    _which(arguments); // TODO
+    // which needs a command to find
+    if (arguments[1] == NULL)
+    {
+        printf("where: Too few arguments.\n");
+        return;
+    }
+
+    exec_where(arguments[1]);
 }
 
 // exit the shell
@@ -78,7 +85,7 @@ void setup_builtins()
     which->command = "which";
     which->executor = &_which;
     where->command = "where";
-    where->executor = &_which;
+    where->executor = &_where;
     exit->command = "exit";
     exit->executor = &_exit_cmd;
 

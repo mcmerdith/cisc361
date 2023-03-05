@@ -39,6 +39,7 @@ int main(int argc, char **argv, char **envp)
 
   struct sigaction action;
   action.sa_handler = sig_handler;
+  sigemptyset(&action.sa_mask);
   action.sa_flags = SA_RESTART;
 
   sigaction(SIGINT, &action, NULL);
