@@ -16,8 +16,8 @@ int expand_n_wildcards(char *arguments[], char *execargs[], int max_args)
     char **p,         // pointer to current glob item
         *current;     // The current argument being processed
 
-    execargs[0] = malloc(strlen(arguments[0]) + 1); // first arg is progrma name
-    strcpy(execargs[0], arguments[0]);              // copy command
+    execargs[0] = calloc(strlen(arguments[0]) + 1, sizeof(char)); // first arg is progrma name
+    strcpy(execargs[0], arguments[0]);                            // copy command
 
     j = 1;
     for (i = 1; j < max_args - 1 && (current = arguments[i]) != NULL; i++)
@@ -29,7 +29,7 @@ int expand_n_wildcards(char *arguments[], char *execargs[], int max_args)
             {
                 for (p = globPaths.gl_pathv; j < max_args - 1 && *p != NULL; ++p)
                 {
-                    execargs[j] = malloc(strlen(*p) + 1);
+                    execargs[j] = calloc(strlen(*p) + 1, sizeof(char));
                     strcpy(execargs[j], *p);
                     j++;
                 }
@@ -39,7 +39,7 @@ int expand_n_wildcards(char *arguments[], char *execargs[], int max_args)
         }
         else
         { // normal argument
-            execargs[j] = malloc(strlen(arguments[i]) + 1);
+            execargs[j] = calloc(strlen(arguments[i]) + 1, sizeof(char));
             strcpy(execargs[j], arguments[i]);
             j++;
         }

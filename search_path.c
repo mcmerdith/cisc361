@@ -25,7 +25,7 @@ char *path_search(char *command, struct pathelement *p, int bPrintOrReturn)
       else
       {
         // return the path
-        ch = malloc(strlen(cmd) + 1);
+        ch = calloc(strlen(cmd) + 1, sizeof(char));
         strcpy(ch, cmd);
         break;
       }

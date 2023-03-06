@@ -134,20 +134,24 @@ void _kill_cmd(char *arguments[])
 
 // update the shell prompt prefix
 void _prompt_cmd(char *arguments[])
-{
+{ // TODO use strncat instead of strcat
     if (arguments[1] == NULL)
-    {
-        TooFewArgs("prompt");
+    { // reset prompt
+        if (prompt_prefix)
+            free(prompt_prefix);
+
+        prompt_prefix = NULL;
         return;
     }
 
     // rejoin the arguments
 
-    char *dest = malloc(sizeof(char) * (strlen(arguments[1]) + 1)), *temp;
+    char *dest = calloc(strlen(arguments[1]) + 1, sizeof(char)),
+         *temp;
     strcpy(dest, arguments[1]);
     for (char **p = &arguments[2]; *p != NULL; ++p)
     {
-        temp = malloc(sizeof(char) * (strlen(dest) + strlen(*p) + 2)); // allocate a buffer to do the joining
+        temp = calloc(strlen(dest) + strlen(*p) + 2, sizeof(char)); // allocate a buffer to do the joining
         // sprintf(temp, "%s %s", dest, *p);
         strcpy(temp, dest); // copy the current string into temp;
         strcat(temp, " ");  // space
@@ -180,7 +184,7 @@ void _setenv_cmd(char *arguments[])
 inline struct shell_builtin *new_builtin(char *command, builtin_executor executor)
 {
     struct shell_builtin *new_builtin = malloc(sizeof(struct shell_builtin));
-    new_builtin->command = malloc((strlen(command) + 1) * sizeof(char));
+    new_builtin->command = calloc(strlen(command) + 1, sizeof(char));
     strcpy(new_builtin->command, command);
     new_builtin->executor = executor;
     return new_builtin;
