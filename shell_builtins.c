@@ -9,6 +9,7 @@
 struct shell_builtin *builtins[BUILTINCOUNT];
 
 extern char *prompt_prefix;
+char *previous_dir;
 
 #pragma region Executors
 
@@ -58,7 +59,51 @@ void _where_cmd(char *arguments[])
 // change the shell working directory
 void _chdir_cmd(char *arguments[])
 {
-    printf("%s: Not implemented", arguments[1]);
+    // temp variables for holding current paths
+    char *tmp_target, *tmp_cwd;
+
+    if (arguments[1] == NULL) // cd to HOME
+    {
+        tmp_target = "~";
+    }
+    else if (strcmp(arguments[1], "-") == 0) // cd to previous directory
+    {
+        if (!previous_dir)
+        { // Ensure there is a previous directory
+            printf("chdir: no previous directory\n");
+            return;
+        }
+
+        tmp_target = calloc(strlen(previous_dir) + 1, sizeof(char)); // allocate memory for the new target
+        strcpy(tmp_target, previous_dir);                            // copy the previous dir into the target
+    }
+    else
+    {
+        if (access(arguments[1], R_OK) != 0)
+        { // Ensure we have access to the directory
+            perror("chdir");
+            return;
+        }
+
+        tmp_target = calloc(strlen(arguments[1]) + 1, sizeof(char));
+        strcpy(tmp_target, arguments[1]);
+    }
+
+    tmp_cwd = getcwd(NULL, 0); // get our current directory
+
+    if (chdir(tmp_target) != 0)
+    { // error state
+        perror("chdir");
+    }
+    else
+    { // success, update our previous dir
+        previous_dir = reallocarray(previous_dir, strlen(tmp_cwd) + 1, sizeof(char));
+        strcpy(previous_dir, tmp_cwd);
+    }
+
+    // free temp pointers
+    free(tmp_target);
+    free(tmp_cwd);
 }
 
 // print the current working directory
@@ -72,19 +117,19 @@ void _pwd_cmd(char *arguments[])
 // change the shell working directory
 void _list_cmd(char *arguments[])
 {
-    printf("%s: Not implemented", arguments[1]);
+    printf("%s: Not implemented", arguments[0]);
 }
 
 // change the shell working directory
 void _pid_cmd(char *arguments[])
 {
-    printf("%s: Not implemented", arguments[1]);
+    printf("%s: Not implemented", arguments[0]);
 }
 
 // change the shell working directory
 void _kill_cmd(char *arguments[])
 {
-    printf("%s: Not implemented", arguments[1]);
+    printf("%s: Not implemented", arguments[0]);
 }
 
 // update the shell prompt prefix
@@ -118,13 +163,13 @@ void _prompt_cmd(char *arguments[])
 // change the shell working directory
 void _printenv_cmd(char *arguments[])
 {
-    printf("%s: Not implemented", arguments[1]);
+    printf("%s: Not implemented", arguments[0]);
 }
 
 // change the shell working directory
 void _setenv_cmd(char *arguments[])
 {
-    printf("%s: Not implemented", arguments[1]);
+    printf("%s: Not implemented", arguments[0]);
 }
 
 #pragma endregion
