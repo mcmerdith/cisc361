@@ -18,4 +18,5 @@ struct shell_builtin
 struct shell_builtin *new_builtin(char *command, builtin_executor executor);
 
 void setup_builtins();
+void cleanup_builtins();
 int try_exec_builtin(char *arguments[]);

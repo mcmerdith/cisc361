@@ -4,11 +4,28 @@
 #include <string.h>
 #include <stdarg.h>
 #include "shell_builtins.h"
+#include "defines.h"
 #include "search_path.h"
 
 struct shell_builtin *builtins[BUILTINCOUNT];
 
 extern char *prompt_prefix;
+
+// copies PREFIX to PROMPT_PREFIX, set to null if PREFIX is null
+void _update_prefix(char *prefix)
+{
+    free(prompt_prefix);
+    if (prefix == NULL)
+    {
+        prompt_prefix = NULL;
+    }
+    else
+    {
+        prompt_prefix = calloc(strlen(prefix) + 1, sizeof(char));
+        strcpy(prompt_prefix, prefix);
+    }
+}
+
 char *previous_dir;
 
 #pragma region Executors
@@ -16,7 +33,7 @@ char *previous_dir;
 // exit the shell
 void _exit_cmd(char *arguments[])
 {
-    exit(0);
+    exit(1);
 }
 
 // print the executable path matching arguments[1]
@@ -137,31 +154,49 @@ void _prompt_cmd(char *arguments[])
 { // TODO use strncat instead of strcat
     if (arguments[1] == NULL)
     { // reset prompt
-        if (prompt_prefix)
-            free(prompt_prefix);
+        printf("Enter a new prompt: ");
+        char buffer[MAXLINE];
+        if (fgets(buffer, MAXLINE, stdin) == NULL)
+        {
+            printf("prompt: not updated\n");
+            clearerr(stdin);
+            return;
+        }
 
-        prompt_prefix = NULL;
+        // Newlines are unnecessary
+        if (buffer[strlen(buffer) - 1] == '\n')
+            buffer[strlen(buffer) - 1] = 0; // replace newline with null
+
+        if (strlen(buffer) == 0)
+        { // If still empty reset
+            _update_prefix(NULL);
+        }
+        else
+        { // Otherwise update
+            _update_prefix(buffer);
+        }
+
         return;
     }
 
     // rejoin the arguments
 
-    char *dest = calloc(strlen(arguments[1]) + 1, sizeof(char)),
+    char *new_prefix = calloc(strlen(arguments[1]) + 1, sizeof(char)),
          *temp;
-    strcpy(dest, arguments[1]);
+    strcpy(new_prefix, arguments[1]);
+
     for (char **p = &arguments[2]; *p != NULL; ++p)
     {
-        temp = calloc(strlen(dest) + strlen(*p) + 2, sizeof(char)); // allocate a buffer to do the joining
-        // sprintf(temp, "%s %s", dest, *p);
-        strcpy(temp, dest); // copy the current string into temp;
-        strcat(temp, " ");  // space
-        strcat(temp, *p);   // new segment
-        free(dest);         // free previous segment
-        dest = temp;        // update new segment
+        temp = calloc(strlen(new_prefix) + strlen(*p) + 2, sizeof(char)); // allocate a buffer to do the joining
+        strcpy(temp, new_prefix);                                         // copy the current string into temp;
+        strcat(temp, " ");                                                // space
+        strcat(temp, *p);                                                 // new segment
+        free(new_prefix);                                                 // free previous segment
+        new_prefix = temp;                                                // update new segment
     }
 
-    free(prompt_prefix);
-    prompt_prefix = dest;
+    _update_prefix(new_prefix); // Set the new prefix
+    free(new_prefix);           // Free our prefix
 }
 
 // change the shell working directory
@@ -207,6 +242,15 @@ void setup_builtins()
 
     for (int i = 0; i < BUILTINCOUNT; ++i)
         builtins[i] = tmp[i];
+}
+
+void cleanup_builtins()
+{
+    for (int i = 0; i < BUILTINCOUNT; ++i)
+    {
+        free(builtins[i]->command);
+        free(builtins[i]);
+    }
 }
 
 #pragma endregion

@@ -7,6 +7,7 @@
 #include <sys/wait.h>
 #include <signal.h>
 #include "sh.h"
+#include "defines.h"
 #include "shell_builtins.h"
 #include "argument_util.h"
 #include "search_path.h"
@@ -29,7 +30,12 @@ void prompt(int bPrintNewline)
 void sig_handler(int sig)
 {
   prompt(1);
-  // printf("%d", getchar());
+}
+
+void shutdown()
+{
+  cleanup_builtins();
+  free(prompt_prefix);
 }
 
 int main(int argc, char **argv, char **envp)
@@ -47,6 +53,7 @@ int main(int argc, char **argv, char **envp)
 
   sigaction(SIGINT, &action, NULL);
   sigaction(SIGTSTP, &action, NULL);
+  atexit(&shutdown);
 
   // Setup our builtin commands
   setup_builtins();
@@ -108,6 +115,8 @@ int main(int argc, char **argv, char **envp)
         printf("child terminates with (%d)\n", WEXITSTATUS(status));
     }
   }
+
+  shutdown();
 
   return 0;
 }
