@@ -6,7 +6,7 @@
 #include "shell_builtins.h"
 #include "search_path.h"
 
-struct shell_builtin *builtins;
+struct shell_builtin *builtins[BUILTINCOUNT];
 
 extern char *prompt_prefix;
 
@@ -129,86 +129,49 @@ void _setenv_cmd(char *arguments[])
 
 #pragma endregion
 
-#pragma region Memory Management for linkedlist
+#pragma region Initialization
 
 // allocate memory for a builtin
 inline struct shell_builtin *new_builtin(char *command, builtin_executor executor)
 {
     struct shell_builtin *new_builtin = malloc(sizeof(struct shell_builtin));
-    new_builtin->command = command;
+    new_builtin->command = malloc((strlen(command) + 1) * sizeof(char));
+    strcpy(new_builtin->command, command);
     new_builtin->executor = executor;
     return new_builtin;
-}
-
-// link some builtins together
-void link_builtins(struct shell_builtin *head, ...)
-{
-    va_list argp;
-    va_start(argp, head);
-
-    struct shell_builtin *current = head,
-                         *previous;
-
-    while (current != NULL)
-    {
-        previous = current;
-        current = va_arg(argp, struct shell_builtin *);
-        previous->next = current;
-    }
 }
 
 // allocate and populate a linked-list of builtins
 void setup_builtins()
 {
-    struct shell_builtin
-        *pwd = new_builtin("pwd", &_pwd_cmd),
-        *which = new_builtin("which", &_which_cmd),
-        *where = new_builtin("where", &_where_cmd),
-        *exit = new_builtin("exit", &_exit_cmd),
-        *prompt = new_builtin("prompt", &_prompt_cmd);
+    struct shell_builtin *tmp[BUILTINCOUNT] = {new_builtin("exit", &_exit_cmd),
+                                               new_builtin("which", &_which_cmd),
+                                               new_builtin("where", &_where_cmd),
+                                               new_builtin("cd", &_chdir_cmd),
+                                               new_builtin("pwd", &_pwd_cmd),
+                                               new_builtin("list", &_list_cmd),
+                                               new_builtin("pid", &_pid_cmd),
+                                               new_builtin("kill", &_kill_cmd),
+                                               new_builtin("prompt", &_prompt_cmd),
+                                               new_builtin("printenv", &_printenv_cmd),
+                                               new_builtin("setenv", &_setenv_cmd)};
 
-    // Link the list
-    link_builtins(pwd, which, where, exit, prompt);
-
-    // update head
-    builtins = pwd;
-}
-
-// Free the linked-list of builtins
-void cleanup_builtins()
-{
-    struct shell_builtin
-        *current = builtins,
-        *temp;
-
-    // free each element of the linked-list
-    while (current != NULL)
-    {
-        temp = current;
-        current = current->next;
-        free(temp->command);
-        free(temp);
-    }
+    for (int i = 0; i < BUILTINCOUNT; ++i)
+        builtins[i] = tmp[i];
 }
 
 #pragma endregion
 
 int try_exec_builtin(char *arguments[])
 {
-
-    struct shell_builtin *current = builtins;
-
-    while (current != NULL)
+    for (int i = 0; i < BUILTINCOUNT; ++i)
     {
-        if (strcmp(current->command, arguments[0]) != 0)
-        {
-            current = current->next;
+        if (strcmp(builtins[i]->command, arguments[0]) != 0)
             continue;
-        }
 
         PrintStatus(arguments[0]);
 
-        current->executor(arguments);
+        builtins[i]->executor(arguments);
 
         return 1;
     }

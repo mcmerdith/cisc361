@@ -8,6 +8,7 @@
     "unistd.h": "c",
     "stdlib.h": "c",
     "string.h": "c",
-    "wait.h": "c"
+    "wait.h": "c",
+    "argument_util.h": "c"
   }
 }

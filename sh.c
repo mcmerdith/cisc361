@@ -8,7 +8,7 @@
 #include <signal.h>
 #include "sh.h"
 #include "shell_builtins.h"
-#include "shell_externals.h"
+#include "argument_util.h"
 #include "search_path.h"
 
 char *prompt_prefix = NULL;
@@ -35,14 +35,11 @@ void sig_handler(int sig)
 int main(int argc, char **argv, char **envp)
 {
   char buffer[MAXLINE],    // temporary buffer for fgets
-      *arguments[MAXARGS], // an array of tokens
-      *temp,               // use whenever a string needs to be temporarily stored
-      *argumentParts;      // used for argument parsing
+      *arguments[MAXARGS]; // an array of tokens
   pid_t pid;               // pid of the executed command
-  int status,              // status of the executed command
-      i,                   // iterators and stuff
-      argumentCount;       // # of tokens in command line
+  int status;              // status of the executed command
 
+  // Set up our signal handlers
   struct sigaction action;
   action.sa_handler = sig_handler;
   sigemptyset(&action.sa_mask);
@@ -51,6 +48,7 @@ int main(int argc, char **argv, char **envp)
   sigaction(SIGINT, &action, NULL);
   sigaction(SIGTSTP, &action, NULL);
 
+  // Setup our builtin commands
   setup_builtins();
 
   while (1)
@@ -76,15 +74,7 @@ int main(int argc, char **argv, char **envp)
       buffer[strlen(buffer) - 1] = 0; // replace newline with null
 
     // parse command line into tokens (stored in buffer)
-    argumentCount = 0;
-    argumentParts = strtok(buffer, " ");
-    while (argumentParts != NULL && argumentCount < MAXARGS)
-    {
-      arguments[argumentCount] = argumentParts;
-      argumentCount++;
-      argumentParts = strtok(NULL, " ");
-    }
-    arguments[argumentCount] = (char *)NULL;
+    expand_n_arguments(buffer, arguments, MAXARGS);
 
     // Our first argument should be the program/command. If null, we have nothing to execute
     if (arguments[0] == NULL)
@@ -103,7 +93,7 @@ int main(int argc, char **argv, char **envp)
       else if (pid == 0) // child
       {
         char *execargs[MAXARGS]; // args for execve
-        expand_wildcards(arguments, execargs, MAXARGS);
+        expand_n_wildcards(arguments, execargs, MAXARGS);
         printf("Executing [%s]\n", execargs[0]);
         execve(execargs[0], execargs, NULL); // if execution succeeds, child process stops here
         printf("couldn't execute: %s\n", buffer);
@@ -118,8 +108,6 @@ int main(int argc, char **argv, char **envp)
         printf("child terminates with (%d)\n", WEXITSTATUS(status));
     }
   }
-
-  cleanup_builtins();
 
   return 0;
 }

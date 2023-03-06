@@ -43,7 +43,7 @@ struct pathelement *get_path()
     tmp->element = malloc(strlen(p) + 1);
     strcpy(tmp->element, p);
     tmp->next = NULL;
-  } while (p = strtok(NULL, ":"));
+  } while ((p = strtok(NULL, ":")));
 
   free(path);
 

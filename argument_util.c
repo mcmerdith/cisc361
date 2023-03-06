@@ -3,12 +3,10 @@
 #include <string.h>
 #include <unistd.h>
 #include <glob.h>
-#include "shell_externals.h"
+#include "argument_util.h"
 #include "search_path.h"
 
-// expand wildcards in arguments into out_execargs.
-// returns a pointer to a NULL terminated array with at most MAX_ARGS elements including the NULL-terminator
-int expand_wildcards(char *arguments[], char *execargs[], int max_args)
+int expand_n_wildcards(char *arguments[], char *execargs[], int max_args)
 {
     // char **execargs = *out_execargs;
 
@@ -69,4 +67,17 @@ int expand_wildcards(char *arguments[], char *execargs[], int max_args)
     }
 
     return 1;
+}
+
+void expand_n_arguments(char *buffer, char *arguments[], int max_args)
+{
+    int argumentCount = 0;
+    char *argumentParts = strtok(buffer, " ");
+    while (argumentParts != NULL && argumentCount < max_args - 1)
+    {
+        arguments[argumentCount] = argumentParts;
+        argumentCount++;
+        argumentParts = strtok(NULL, " ");
+    }
+    arguments[argumentCount] = (char *)NULL;
 }
