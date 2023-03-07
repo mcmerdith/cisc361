@@ -93,7 +93,9 @@ void _chdir_cmd(char *arguments[])
         printf("chdir: auto home not implemented for windows");
         return;
 #else
-        tmp_target = getenv("HOME");
+        char *home = getenv("HOME");
+        tmp_target = calloc(strlen(home) + 1, sizeof(char));
+        strcpy(tmp_target, home);
 #endif
     }
     else
@@ -111,29 +113,22 @@ void _chdir_cmd(char *arguments[])
         }
         else
         {
-            tmp_target = calloc(strlen(tmp_target) + 1, sizeof(char));
+            tmp_target = calloc(strlen(arguments[0]) + 1, sizeof(char));
+            strcpy(tmp_target, arguments[0]);
 
-            if (tmp_target[0] == '~' && (tmp_target[1] == '/' || tmp_target[1] == '\\')) // Expand ~ into ENV[HOME]
+            if (tmp_target[0] == '~' && (strlen(tmp_target) == 1 || tmp_target[1] == '/' || tmp_target[1] == '\\')) // Expand ~ into ENV[HOME]
             {
                 char *home = getenv("HOME"),                          // the path of user home
                     *temp = calloc(strlen(tmp_target), sizeof(char)); // a buffer one smaller than original since ~ will be trimmed out
 
-                // shift our current target to a temp variable and reallocate the target to accommodate the larger path
-                strcpy(temp, tmp_target + 1);
-                tmp_target = reallocarray(tmp_target, strlen(home) + strlen(temp) + 1, sizeof(char));
+                strcpy(temp, tmp_target + 1);                                                         // shift our current target to a temp variable
+                tmp_target = reallocarray(tmp_target, strlen(home) + strlen(temp) + 1, sizeof(char)); // reallocate the target to accomodate the expanded path
 
-                strcpy(tmp_target, home);
-                strcat(tmp_target, temp + 1);
+                strcpy(tmp_target, home); // copy the home path
+                strcat(tmp_target, temp); // copy the remainder of the path
+
+                free(temp); // free our temp variable
             }
-
-            if (access(tmp_target, R_OK) != 0)
-            { // Ensure we have access to the directory
-                perror("chdir");
-                return;
-            }
-
-            tmp_target = calloc(strlen(arguments[0]) + 1, sizeof(char));
-            strcpy(tmp_target, arguments[0]);
         }
     }
 
