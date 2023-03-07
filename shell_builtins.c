@@ -16,13 +16,13 @@ char *previous_dir;
 // copies PREFIX to PROMPT_PREFIX, set to null if PREFIX is null
 void _update_prefix(char *prefix)
 {
-    free(prompt_prefix);
+    free(prompt_prefix); // free the current prefix
     if (prefix == NULL)
-    {
+    { // remove the prefix
         prompt_prefix = NULL;
     }
     else
-    {
+    { // set a new prefix
         prompt_prefix = calloc(strlen(prefix) + 1, sizeof(char));
         strcpy(prompt_prefix, prefix);
     }
@@ -89,14 +89,9 @@ void _chdir_cmd(char *arguments[])
 
     if (arguments[0] == NULL) // no arguments
     {                         // cd to HOME
-#if defined __CYGWIN__ || defined _WIN32 || defined _WIN64
-        printf("chdir: auto home Not implemented\n for windows");
-        return;
-#else
         char *home = getenv("HOME");
         tmp_target = calloc(strlen(home) + 1, sizeof(char));
         strcpy(tmp_target, home);
-#endif
     }
     else
     { // location provided
@@ -112,7 +107,7 @@ void _chdir_cmd(char *arguments[])
             strcpy(tmp_target, previous_dir);                            // copy the previous dir into the target
         }
         else
-        {
+        { // cd to the provided directory
             tmp_target = calloc(strlen(arguments[0]) + 1, sizeof(char));
             strcpy(tmp_target, arguments[0]);
 
