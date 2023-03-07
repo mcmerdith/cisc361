@@ -71,13 +71,8 @@ int expand_n_wildcards(char *arguments[], char *execargs[], int max_args)
 
 void expand_n_arguments(char *buffer, char *arguments[], int max_args)
 {
-    int argumentCount = 0;
-    char *argumentParts = strtok(buffer, " ");
-    while (argumentParts != NULL && argumentCount < max_args - 1)
-    {
-        arguments[argumentCount] = argumentParts;
-        argumentCount++;
-        argumentParts = strtok(NULL, " ");
-    }
-    arguments[argumentCount] = (char *)NULL;
+    int i;
+    for (i = 0; (arguments[i] = strsep(&buffer, " ")) != NULL && i < max_args - 1; ++i)
+        ;
+    arguments[i] = NULL; // make sure that last element is null
 }
