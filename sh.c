@@ -13,6 +13,7 @@
 #include "search_path.h"
 
 char *prompt_prefix = NULL;
+pid_t shell_pid;
 
 void prompt(int bPrintNewline)
 {
@@ -40,6 +41,8 @@ void shutdown()
 
 int main(int argc, char **argv, char **envp)
 {
+  shell_pid = getpid();
+
   char buffer[MAXLINE],    // temporary buffer for fgets
       *arguments[MAXARGS]; // an array of tokens
   pid_t pid;               // pid of the executed command

@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
-#include <stdarg.h>
+#include <signal.h>
 #include "shell_builtins.h"
 #include "defines.h"
 #include "search_path.h"
@@ -10,6 +10,8 @@
 struct shell_builtin *builtins[BUILTINCOUNT];
 
 extern char *prompt_prefix;
+extern pid_t shell_pid;
+char *previous_dir;
 
 // copies PREFIX to PROMPT_PREFIX, set to null if PREFIX is null
 void _update_prefix(char *prefix)
@@ -25,8 +27,6 @@ void _update_prefix(char *prefix)
         strcpy(prompt_prefix, prefix);
     }
 }
-
-char *previous_dir;
 
 #pragma region Executors
 
@@ -90,7 +90,7 @@ void _chdir_cmd(char *arguments[])
     if (arguments[0] == NULL) // no arguments
     {                         // cd to HOME
 #if defined __CYGWIN__ || defined _WIN32 || defined _WIN64
-        printf("chdir: auto home not implemented for windows");
+        printf("chdir: auto home Not implemented\n for windows");
         return;
 #else
         char *home = getenv("HOME");
@@ -160,19 +160,68 @@ void _pwd_cmd(char *arguments[])
 // change the shell working directory
 void _list_cmd(char *arguments[])
 {
-    printf("%s: Not implemented", arguments[0]);
+    printf("list: Not implemented\n");
 }
 
 // change the shell working directory
 void _pid_cmd(char *arguments[])
 {
-    printf("%s: Not implemented", arguments[0]);
+    printf("shell pid: %d\n", shell_pid);
 }
 
 // change the shell working directory
 void _kill_cmd(char *arguments[])
 {
-    printf("%s: Not implemented", arguments[0]);
+    if (arguments[0] == NULL || (arguments[0][0] == '-' && arguments[1] == NULL))
+    {
+        TooFewArgs("kill");
+        return;
+    }
+
+    int signal = SIGINT;
+    pid_t proc_id;
+
+    char *err,                    // holds errors for strtol
+        **curr = &(arguments[0]); // the current argument to be parsed
+
+    if (arguments[0][0] == '-')
+    {                            // signal provided, parse into SIGNAL
+        char *tmp = &(*curr)[1]; // copy the signal without the preceding -
+        if (strlen(tmp) == 0)    // no signal
+        {
+            printf("kill: invalid signal\n");
+            return;
+        }
+
+        signal = strtol(tmp, &err, 10); // attempt to convert
+
+        if (strlen(err) != 0)
+        { // invalid signal
+            printf("kill: invalid signal @ %s\n", err);
+            return;
+        }
+
+        ++curr; // move our pointer to the next argument
+    }
+
+    if (strlen(*curr) == 0)
+    {
+        printf("kill: invalid process id\n");
+        return;
+    }
+
+    proc_id = strtol(*curr, &err, 10);
+
+    if (strlen(err) != 0)
+    { // invalid proc_id
+        printf("kill: invalid process id @ %s\n", err);
+        return;
+    }
+
+    if (kill(proc_id, signal) != 0)
+    {
+        perror("kill");
+    }
 }
 
 // update the shell prompt prefix
@@ -228,13 +277,13 @@ void _prompt_cmd(char *arguments[])
 // change the shell working directory
 void _printenv_cmd(char *arguments[])
 {
-    printf("%s: Not implemented", arguments[0]);
+    printf("printenv: Not implemented\n");
 }
 
 // change the shell working directory
 void _setenv_cmd(char *arguments[])
 {
-    printf("%s: Not implemented", arguments[0]);
+    printf("setenv: Not implemented\n");
 }
 
 #pragma endregion
