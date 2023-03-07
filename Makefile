@@ -1,5 +1,12 @@
-#CC=gcc
-CC=gcc -Wall -Wno-unknown-pragmas
+# Linux compiler
+BCC=gcc
+
+# Windows compiler
+#BCC=x86_64-w64-mingw32-gcc
+
+#CC=$(BCC)
+CC=$(BCC) -Wall -Wno-unknown-pragmas
+
 
 mysh: sh.o shell_builtins.o argument_util.o get_path.o search_path.o
 	$(CC) -g sh.o shell_builtins.o argument_util.o get_path.o search_path.o -o mysh

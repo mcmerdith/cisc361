@@ -36,41 +36,49 @@ void _exit_cmd(char *arguments[])
     exit(1);
 }
 
-// print the executable path matching arguments[1]
+// print the executable path matching each of ARGUMENTS
 void _which_cmd(char *arguments[])
 {
     // which needs a command to find
-    if (arguments[1] == NULL)
+    if (arguments[0] == NULL)
     {
         TooFewArgs("which");
         return;
     }
 
-    char *cmd = exec_which(arguments[1]);
+    char *arg, *cmd;
+    for (int i = 0; (arg = arguments[i]) != NULL; ++i)
+    {
+        cmd = exec_which(arg);
 
-    // Check if we found a command
-    if (cmd)
-    {
-        printf("%s\n", cmd);
-        free(cmd);
-    }
-    else
-    {
-        printf("%s: Command not found\n", arguments[1]);
+        // Check if we found a command
+        if (cmd)
+        {
+            printf("%s\n", cmd);
+            free(cmd);
+        }
+        else
+        {
+            printf("%s: Command not found\n", arg);
+        }
     }
 }
 
-// print all executable paths matching arguments[1]
+// print all executable paths matching each of ARGUMENTS
 void _where_cmd(char *arguments[])
 {
     // which needs a command to find
-    if (arguments[1] == NULL)
+    if (arguments[0] == NULL)
     {
         TooFewArgs("where");
         return;
     }
 
-    exec_where(arguments[1]);
+    char *arg;
+    for (int i = 0; (arg = arguments[i]) != NULL; ++i)
+    {
+        exec_where(arg);
+    }
 }
 
 // change the shell working directory
@@ -79,31 +87,54 @@ void _chdir_cmd(char *arguments[])
     // temp variables for holding current paths
     char *tmp_target, *tmp_cwd;
 
-    if (arguments[1] == NULL) // cd to HOME
-    {
-        tmp_target = "~";
-    }
-    else if (strcmp(arguments[1], "-") == 0) // cd to previous directory
-    {
-        if (!previous_dir)
-        { // Ensure there is a previous directory
-            printf("chdir: no previous directory\n");
-            return;
-        }
-
-        tmp_target = calloc(strlen(previous_dir) + 1, sizeof(char)); // allocate memory for the new target
-        strcpy(tmp_target, previous_dir);                            // copy the previous dir into the target
+    if (arguments[0] == NULL) // no arguments
+    {                         // cd to HOME
+#if defined __CYGWIN__ || defined _WIN32 || defined _WIN64
+        printf("chdir: auto home not implemented for windows");
+        return;
+#else
+        tmp_target = getenv("HOME");
+#endif
     }
     else
-    {
-        if (access(arguments[1], R_OK) != 0)
-        { // Ensure we have access to the directory
-            perror("chdir");
-            return;
-        }
+    { // location provided
+        if (strcmp(arguments[0], "-") == 0)
+        { // cd to previous directory
+            if (!previous_dir)
+            { // Ensure there is a previous directory
+                printf("chdir: no previous directory\n");
+                return;
+            }
 
-        tmp_target = calloc(strlen(arguments[1]) + 1, sizeof(char));
-        strcpy(tmp_target, arguments[1]);
+            tmp_target = calloc(strlen(previous_dir) + 1, sizeof(char)); // allocate memory for the new target
+            strcpy(tmp_target, previous_dir);                            // copy the previous dir into the target
+        }
+        else
+        {
+            tmp_target = calloc(strlen(tmp_target) + 1, sizeof(char));
+
+            if (tmp_target[0] == '~' && (tmp_target[1] == '/' || tmp_target[1] == '\\')) // Expand ~ into ENV[HOME]
+            {
+                char *home = getenv("HOME"),                          // the path of user home
+                    *temp = calloc(strlen(tmp_target), sizeof(char)); // a buffer one smaller than original since ~ will be trimmed out
+
+                // shift our current target to a temp variable and reallocate the target to accommodate the larger path
+                strcpy(temp, tmp_target + 1);
+                tmp_target = reallocarray(tmp_target, strlen(home) + strlen(temp) + 1, sizeof(char));
+
+                strcpy(tmp_target, home);
+                strcat(tmp_target, temp + 1);
+            }
+
+            if (access(tmp_target, R_OK) != 0)
+            { // Ensure we have access to the directory
+                perror("chdir");
+                return;
+            }
+
+            tmp_target = calloc(strlen(arguments[0]) + 1, sizeof(char));
+            strcpy(tmp_target, arguments[0]);
+        }
     }
 
     tmp_cwd = getcwd(NULL, 0); // get our current directory
@@ -152,7 +183,7 @@ void _kill_cmd(char *arguments[])
 // update the shell prompt prefix
 void _prompt_cmd(char *arguments[])
 { // TODO use strncat instead of strcat
-    if (arguments[1] == NULL)
+    if (arguments[0] == NULL)
     { // reset prompt
         printf("Enter a new prompt: ");
         char buffer[MAXLINE];
@@ -181,11 +212,11 @@ void _prompt_cmd(char *arguments[])
 
     // rejoin the arguments
 
-    char *new_prefix = calloc(strlen(arguments[1]) + 1, sizeof(char)),
+    char *new_prefix = calloc(strlen(arguments[0]) + 1, sizeof(char)),
          *temp;
-    strcpy(new_prefix, arguments[1]);
+    strcpy(new_prefix, arguments[0]);
 
-    for (char **p = &arguments[2]; *p != NULL; ++p)
+    for (char **p = &arguments[1]; *p != NULL; ++p)
     {
         temp = calloc(strlen(new_prefix) + strlen(*p) + 2, sizeof(char)); // allocate a buffer to do the joining
         strcpy(temp, new_prefix);                                         // copy the current string into temp;
@@ -251,6 +282,8 @@ void cleanup_builtins()
         free(builtins[i]->command);
         free(builtins[i]);
     }
+
+    free(previous_dir);
 }
 
 #pragma endregion
@@ -264,7 +297,7 @@ int try_exec_builtin(char *arguments[])
 
         PrintStatus(arguments[0]);
 
-        builtins[i]->executor(arguments);
+        builtins[i]->executor(&arguments[1]);
 
         return 1;
     }
