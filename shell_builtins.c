@@ -3,6 +3,8 @@
 #include <unistd.h>
 #include <string.h>
 #include <signal.h>
+#include <sys/types.h>
+#include <dirent.h>
 #include "shell_builtins.h"
 #include "defines.h"
 #include "search_path.h"
@@ -155,7 +157,45 @@ void _pwd_cmd(char *arguments[])
 // list all files in a directory
 void _list_cmd(char *arguments[])
 {
-    printf("list: Not implemented\n");
+    char *dirs[MAXARGS];
+    if (arguments[0] == NULL)
+    {
+        dirs[0] = getcwd(NULL, 0);
+        dirs[1] = NULL;
+    }
+    else
+    {
+        int i = 0;
+        for (char *arg; (arg = arguments[i]) != NULL; ++i)
+        {
+            dirs[i] = calloc(strlen(arg) + 1, sizeof(char));
+            strcpy(dirs[i], arg);
+        }
+
+        dirs[i] = NULL;
+    }
+
+    DIR *currdir;
+    struct dirent *direntry;
+    for (char **dir = dirs; *dir != NULL; ++dir)
+    {
+        printf("\n%s:\n", *dir);
+        currdir = opendir(*dir);
+        if (currdir == NULL)
+        {
+            perror("list");
+        }
+        else
+        {
+            while ((direntry = readdir(currdir)) != NULL)
+            {
+                printf("%s\n", direntry->d_name);
+            }
+        }
+
+        free(currdir);
+        free(*dir);
+    }
 }
 
 // print the shells pid
