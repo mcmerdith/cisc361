@@ -9,7 +9,7 @@
 
 struct shell_builtin *builtins[BUILTINCOUNT];
 
-extern char *prompt_prefix;
+extern char *prompt_prefix, **environ;
 extern pid_t shell_pid;
 char *previous_dir;
 
@@ -99,7 +99,7 @@ void _chdir_cmd(char *arguments[])
         { // cd to previous directory
             if (!previous_dir)
             { // Ensure there is a previous directory
-                printf("chdir: no previous directory\n");
+                fprintf(stderr, "chdir: no previous directory\n");
                 return;
             }
 
@@ -272,7 +272,20 @@ void _prompt_cmd(char *arguments[])
 // print an environment variable
 void _printenv_cmd(char *arguments[])
 {
-    printf("printenv: Not implemented\n");
+    if (arguments[0] == NULL)
+    { // print all environs
+        for (char **curr_environ = environ; *curr_environ != NULL; ++curr_environ)
+        {
+            printf("%s\n", *curr_environ);
+        }
+    }
+    else
+    {
+        for (char **arg = arguments; *arg != NULL; ++arg)
+        {
+            printf("%s=%s\n", *arg, getenv(*arg));
+        }
+    }
 }
 
 // set an environment variable
