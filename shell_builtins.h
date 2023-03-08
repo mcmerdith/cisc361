@@ -2,8 +2,8 @@
 
 #define BUILTINCOUNT 11
 
-#define PrintStatus(command) fprintf(stderr, "Executing built-in command [%s]\n", command)
-#define TooFewArgs(command) printf("%s: Too few arguments.\n", command)
+#define PrintStatus(command) printf("Executing built-in command [%s]\n", command)
+#define TooFewArgs(command) fprintf(stderr, "%s: Too few arguments.\n", command)
 
 // consumes an array of strings and returns nothing
 typedef void (*builtin_executor)(char *[]);
