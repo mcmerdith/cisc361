@@ -33,7 +33,7 @@ void _update_prefix(char *prefix)
 // exit the shell
 void _exit_cmd(char *arguments[])
 {
-    exit(1);
+    exit(0);
 }
 
 // print the executable path matching each of ARGUMENTS
@@ -291,7 +291,20 @@ void _printenv_cmd(char *arguments[])
 // set an environment variable
 void _setenv_cmd(char *arguments[])
 {
-    printf("setenv: Not implemented\n");
+    if (arguments[0] == NULL)
+    {
+        _printenv_cmd(arguments);
+    }
+    else if (arguments[1] == NULL)
+    {
+        setenv(arguments[0], "", 1);
+        printf("Set %s=''\n", arguments[0]);
+    }
+    else
+    {
+        setenv(arguments[0], arguments[1], 1);
+        printf("Set %s=%s\n", arguments[0], arguments[1]);
+    }
 }
 
 #pragma endregion
