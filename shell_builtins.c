@@ -152,19 +152,19 @@ void _pwd_cmd(char *arguments[])
     free(temp); // avoid memory leak
 }
 
-// change the shell working directory
+// list all files in a directory
 void _list_cmd(char *arguments[])
 {
     printf("list: Not implemented\n");
 }
 
-// change the shell working directory
+// print the shells pid
 void _pid_cmd(char *arguments[])
 {
     printf("shell pid: %d\n", shell_pid);
 }
 
-// change the shell working directory
+// send SIGINT or a parameterized signal to a process
 void _kill_cmd(char *arguments[])
 {
     if (arguments[0] == NULL || (arguments[0][0] == '-' && arguments[1] == NULL))
@@ -269,13 +269,13 @@ void _prompt_cmd(char *arguments[])
     free(new_prefix);           // Free our prefix
 }
 
-// change the shell working directory
+// print an environment variable
 void _printenv_cmd(char *arguments[])
 {
     printf("printenv: Not implemented\n");
 }
 
-// change the shell working directory
+// set an environment variable
 void _setenv_cmd(char *arguments[])
 {
     printf("setenv: Not implemented\n");
