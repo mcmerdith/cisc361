@@ -41,6 +41,14 @@ void shutdown()
 
 int main(int argc, char **argv, char **envp)
 {
+  printf("\nWelcome to\n");
+  printf("    __  ___   _____    __  __\n");   // super
+  printf("   /  |/  /  / ___/   / / / /\n");   // dope
+  printf("  / /|_/ /   \\__ \\   / /_/ / \n"); // ascii
+  printf(" / /  / /   ___/ /  / __  /  \n");   // art
+  printf("/_/  /_/   /____/  /_/ /_/   \n");   // intro
+  printf("\nv1.0\n\n");
+
   shell_pid = getpid();
 
   char buffer[MAXLINE],    // temporary buffer for fgets
@@ -103,9 +111,10 @@ int main(int argc, char **argv, char **envp)
       else if (pid == 0) // child
       {
         char *execargs[MAXARGS]; // args for execve
-        expand_n_wildcards(arguments, execargs, MAXARGS);
+        if (!expand_n_wildcards(arguments, execargs, MAXARGS))
+          exit(1); // Skip execution if failure
         printf("Executing [%s]\n", execargs[0]);
-        execve(execargs[0], execargs, NULL); // if execution succeeds, child process stops here
+        execve(execargs[0], execargs, envp); // if execution succeeds, child process stops here
         printf("couldn't execute: %s\n", buffer);
         exit(127);
       }
@@ -115,7 +124,11 @@ int main(int argc, char **argv, char **envp)
         printf("waitpid error\n");
 
       if (WIFEXITED(status)) // S&R p. 239
-        printf("child terminates with (%d)\n", WEXITSTATUS(status));
+      {
+        int exitcode = WEXITSTATUS(status);
+        if (exitcode != 0)
+          printf("process terminated with code %d\n", exitcode);
+      }
     }
   }
 
