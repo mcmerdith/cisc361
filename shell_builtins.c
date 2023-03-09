@@ -7,6 +7,7 @@
 #include <dirent.h>
 #include "shell_builtins.h"
 #include "defines.h"
+#include "argument_util.h"
 #include "search_path.h"
 
 struct shell_builtin *builtins[BUILTINCOUNT];
@@ -289,24 +290,9 @@ void _prompt_cmd(char *arguments[])
         return;
     }
 
-    // rejoin the arguments
-
-    char *new_prefix = calloc(strlen(arguments[0]) + 1, sizeof(char)),
-         *temp;
-    strcpy(new_prefix, arguments[0]);
-
-    for (char **p = &arguments[1]; *p != NULL; ++p)
-    {
-        temp = calloc(strlen(new_prefix) + strlen(*p) + 2, sizeof(char)); // allocate a buffer to do the joining
-        strcpy(temp, new_prefix);                                         // copy the current string into temp;
-        strcat(temp, " ");                                                // space
-        strcat(temp, *p);                                                 // new segment
-        free(new_prefix);                                                 // free previous segment
-        new_prefix = temp;                                                // update new segment
-    }
-
+    char *new_prefix = join_array(arguments, " ");
     _update_prefix(new_prefix); // Set the new prefix
-    free(new_prefix);           // Free our prefix
+    free(new_prefix);
 }
 
 // print an environment variable

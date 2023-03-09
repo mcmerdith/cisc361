@@ -76,3 +76,24 @@ void expand_n_arguments(char *buffer, char *arguments[], int max_args)
         ;
     arguments[i] = NULL; // make sure that last element is null
 }
+
+char *join_array(char *array[], char *delimiter)
+{
+    // rejoin the arguments
+
+    char *joined_string = calloc(strlen(array[0]) + 1, sizeof(char)),
+         *temp;
+    strcpy(joined_string, array[0]);
+
+    for (char **p = &array[1]; *p != NULL; ++p)
+    {
+        temp = calloc(strlen(joined_string) + strlen(*p) + 2, sizeof(char)); // allocate a buffer to do the joining
+        strcpy(temp, joined_string);                                         // copy the current string into temp;
+        strcat(temp, " ");                                                   // space
+        strcat(temp, *p);                                                    // new segment
+        free(joined_string);                                                 // free previous segment
+        joined_string = temp;                                                // update new segment
+    }
+
+    return joined_string;
+}
