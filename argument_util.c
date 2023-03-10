@@ -72,7 +72,9 @@ int expand_n_wildcards(char *arguments[], char *execargs[], int max_args)
 void expand_n_arguments(char *buffer, char *arguments[], int max_args)
 {
     int i;
-    for (i = 0; (arguments[i] = strsep(&buffer, " ")) != NULL && i < max_args - 1; ++i)
+    char *saveptr;
+    arguments[0] = strtok_r(buffer, " ", &saveptr);
+    for (i = 1; (arguments[i] = strtok_r(NULL, " ", &saveptr)) != NULL && i < max_args - 1; ++i)
         ;
     arguments[i] = NULL; // make sure that last element is null
 }
