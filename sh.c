@@ -17,11 +17,22 @@ pid_t shell_pid;
 
 void prompt(int bPrintNewline)
 {
-  char *cwd = getcwd(NULL, 0);
+
   if (bPrintNewline)
     printf("\n");
   if (prompt_prefix)
     printf("%s ", prompt_prefix);
+
+  char *cwd = getcwd(NULL, 0), *home = getenv("HOME"), *occur = strstr(cwd, home);
+  if (occur != NULL && occur == cwd)                                   // checks if the cwd starts with the home directory
+  {                                                                    // replace ENV[HOME] with ~
+    char *temp = calloc(strlen(cwd) - strlen(home) + 1, sizeof(char)); // allocate a buffer for the cwd without homedir
+    strcpy(temp, occur + strlen(home));                                // move the remainder of cwd
+    cwd = reallocarray(cwd, strlen(temp) + 2, sizeof(char));           // 2 additional characters for the ~ and null-terminator
+    strcpy(cwd, "~");
+    strcat(cwd, temp);
+    free(temp);
+  }
 
   printf("[%s] msh > ", cwd);
   free(cwd);
