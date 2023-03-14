@@ -1,461 +1,484 @@
-
-<!-- saved from url=(0056)https://www.eecis.udel.edu/~cshen/361/PA_3_Simple_Shell/ -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- saved from url=(0057)https://www.eecis.udel.edu/~cshen/361/PA_4_More_Features/ -->
 <html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
-<title>CISC361 Project 3</title>
+  <title>CISC361-010 Project 4</title>
 </head>
 <body bgcolor="#ffffff" text="#000000">
-
 <center>
-<h1>Programming Assignment 3</h1>
+<h1>Programming Assignment 4</h1>
 
-<font size="+2"><b>Simple Shell</b></font> 
+<font size="+2"><b>Adding More Features to the Shell</b></font> <br>
 </center>
-
-<!--
-https://github.com/hvy/small-shell
--->
+<br>
+<p> </p>
+<h2>Objective</h2>
+The main objective of this assignment is to add more functionalities
+to your shell from Programming Assignment 3.
+So the first step is to get your shell from Programming Assignment 3 
+working.  <font color="red">You may use this
+<a href="https://www.eecis.udel.edu/~cshen/361/PA_4_More_Features/SHELL.zip">shell</a> as the code base for developing
+Programming Assignment 4.</font> 
 
 <p>
-</p><h3>Objectives</h3>
-The objectives of this project are
-to learn how a Unix shell works,
-to write a simple shell,
-to create processes, 
-to handle signals,
-to use Unix system calls and C library function calls, and
-to <font color="blue">become a better programmer</font>.
-<br>
+The assignment introduces background process, file redirection,
+pipe, and programming with POSIX threads
+(pthreads), including <i><b>mutual exclusion</b></i> with pthreads.
+Experience with some more system calls and C
+library functions will also be done to hone your programming skills.
+Reading of <b>man pages</b> will also be a must to do well. <br>
 
-<h3>Background readings</h3>
+</p><p>
+Try <a href="https://www.eecis.udel.edu/~cshen/361/PA_4_More_Features/sample-code">sample code</a> to experiment more.
+
+</p><h3>The Assignment</h3>
 <ul>
-<li> Wikipedia articles on
-<a href="http://en.wikipedia.org/wiki/Unix_shell">Unix shells</a>
-and <a href="http://en.wikipedia.org/wiki/TENEX_C_shell">tcsh</a>.
-</li><li> Manual pages of Unix system calls and C library function calls.
-</li><li> Official <a href="http://www.unix.com/man-page/OSX/1/tcsh/">tcsh man page</a>.
-</li><li> Try <a href="https://www.eecis.udel.edu/~cshen/361/PA_3_Simple_Shell/sample-code">sample code</a> to experiment more.
-</li><li> Try <a href="https://www.eecis.udel.edu/~cshen/361/PA_3_Simple_Shell/skeleton-code/shell-with-builtin.c">a simple shell with one built-in command</a>.
-</li><li> Use the code in <a href="https://www.eecis.udel.edu/~cshen/361/PA_3_Simple_Shell/skeleton-code/SHELL.zip">shell skeleton code</a> to get started.
-</li></ul>
+<li> <font color="green"><b>Assumption of command lines</b></font>: Tokens in command lines are separated by space(s). There are no commands like 
+"<code>./a.out&amp;</code>", "<code>amd1|cmd2</code>",
+"<code>cmd &gt;&gt;outfile</code>", "<code>cmd&gt;&gt; outfile</code>", etc.
+</li>
 
-<h3>The Assignment</h3>
-To write a simple shell in C with the following "built-in" commands.
-<br>
-<h4>Overview</h4>
+<p>
+</p><li> Implement the ability to <b>background</b> a 'job'
+using '<b>&amp;</b>'. This needs to only work for executing 
+<b>external</b> commands. What you need to do is to identify 
+that the last thing given on the command line is a '&amp;'.
+The backgrounded job is
+executed <b>concurrently</b> with the shell, rather
+than having the shell wait for it to complete. The shell should go and
+print another prompt to wait for the next command. It is possible
+that several backgrounded jobs could be running
+concurrently at the same time. <br>
 
-A shell has a loop that prints a prompt, consisting of a
-"prefix," which is initially an empty string, followed by 
-'<code> [cwd]&gt; </code>', where <code>cwd</code> is the "current working
-directory," and executes commands until the <code>exit</code> command is
-entered.  In the loop, the shell checks if the command is one of the
-built-in commands (given below) or an executable (external command) in the search
-path.  The shell needs to pass arguments to the external commands (i.e.,
-build an <code>argv</code> array).  If the command entered is neither
-one of the built-in commands nor in the search paths, the shell prints
-"<code>command</code>: Command not found." where <code>command</code> is the
-command name that was entered.
-<h4>More Details</h4>
-<ol>
-  <li> Obviously, the shell needs to parse the command line entered.
-    A good way to do this would be to use <code>fgets(3)</code> to read in the (entire)
-    command line, then use <code>strtok(3)</code> with a space as the delimiter.
-    The first "word" will be the command (where we'll ignore the possibility that a
-    command could have a space in its name).  All the "words" after that are
-    arguments to be passed to the command (which the shell needs to put into a <code>char**</code>).  
-    Check out <a href="https://www.eecis.udel.edu/~cshen/361/PA_3_Simple_Shell/sample-code/parse-cmd.c">parse-cmd.c</a>
-    to see how this is done.
-    <code>fgets()</code> returns NULL on error or when end
-    of file (EOF) occurs while no characters have been read.
-    </li>
-  <li> After you get the command, check if it is one of the built-in commands
-    (explained below). If it is, then perform the corresponding function for that.</li>
-  <li> If it is not one of the built-in commands, check if it is an <b>absolute path</b> (a
-    command begins with '<code>/</code>') or a path begins with '<code>./</code>', '<code>../</code>', etc., and run that if it is an executable
-    (use <code>access(2)</code> to check).</li>
-  <li> If the command is neither of the above cases then search for the
-    command in the search path by looping through the paths stored as a <b>linked
-    list</b> as given in <code>get_path.c</code> in the
-    <a href="https://www.eecis.udel.edu/~cshen/361/PA_3_Simple_Shell/skeleton-code">skeleton code</a>. (You may 
-    <code>gcc get_path.c get_path_main.c</code> and run the
-    generated <code>a.out</code> to see what happends.)
-    You may also use your own linked list code.
-    Use <code>access(2)</code> in a loop to find the first executable
-    in the paths for the command.
-    <code>snprintf(3)</code> would be useful here (as using <code>strcat()</code>
-    has caused problems for some people).</li>
-  <li> Once you find the (external) command, you should execute it by ullingsing 
-    <code>execve(2)</code>. 
-    Review <a href="https://www.eecis.udel.edu/~cshen/361/PA_3_Simple_Shell/sample-code/execve_ls.c">execve_ls.c</a> to see
-    how <code>execve(2)</code> should be invoked.
-    The shell should also execute
-    <code>waitpid(2)</code> and print out the return status of the command if
-    it is nonzero like <code>tcsh</code> does when the 
-    <code>printexitvalue</code> shell variable is set. Look into using the
-    WEXITSTATUS macro from 
-    <a href="http://pubs.opengroup.org/onlinepubs/9699919799/functions/wait.html">
-    &lt;sys/wait.h&gt;</a>.</li>
-  <li> Before executing a command, the shell should also print out what it
-    is about to execute. (i.e. print "Executing [<em>pathname</em>]"; for built-in commands,
-    print "Executing built-in [<em>built-in command name</em>]").</li>
-  <li> The shell needs to support the <code>*</code> wildcard character when a single <code>*</code> is given.
-    You do not need to handle the situation when <code>*</code> is given with a <code>/</code> in the
-    string (i.e., /usr/include/*.h).
-    This should work just like it does in csh/tcsh when <code>noglob</code> is not set.
-    The shell need only to support the
-    possibility of one <code>*</code> on the command line, but it could have characters
-    prepended and/or appended.  (That is, <code>ls *</code> should work correctly 
-    as should <code>ls *.c</code>, <code>ls s*</code>, <code>ls
-    p*.txt</code>, etc.) Hint: implement
-    the <code>list</code> built-in command explained below before attempting this.
-    You may use <code>glob(3)</code> or <code>wordexp(3)</code>if you wish.
-    [Review <code>glob.c</code> in 
-    <a href="https://www.eecis.udel.edu/~cshen/361/PA_3_Simple_Shell/sample-code">sample code</a>.]
-    <font color="red">Note that it is the shell's responsibility
-    to expand wildcards to matching (file) names.</font>
-    (Review <code>wildcard-1.c</code> in
-    <a href="https://www.eecis.udel.edu/~cshen/361/PA_3_Simple_Shell/sample-code">sample code</a>.)
-    <font color="red">If there were no matches, the "original"
-    arguments are passed to <code>execve()</code>.</font> 
-    <font color="blue">The shell would
-    only need to make the wildcard to work with external commands.</font>
-    </li>
-<!--
-  <li> You also need to support the <code>?</code> wildcard character which should match
-    any single character (exactly one character match) in a filename
-    (anywhere in the filename).  The <code>*</code> and <code>?</code> should also work together.
-    </li>
--->
-  <li> When a user presses Control-C (Ctrl-C), the SIGINT signal is sent
-    to all processes in the <em>foreground process group</em>.
-    SIGINT should be caught and ignored by 
-    the shell to prompt for commands, but terminates the 
-    running child process otherwise.  Use <code>signal(2)</code> and/or
-    <code>sigset(3)</code> for this.  Ctrl-Z (SIGTSTP) and SIGTERM
-    should be ignored using <code>sigignore(3)</code> or
-    <code>signal(2)</code>.  Check out sample code
-    <a href="https://www.eecis.udel.edu/~cshen/361/PA_3_Simple_Shell/sample-code/signal_Z.c">sleep_Z.c</a>.
-    <font color="red">Note that when a user is running a command
-    (executable) inside
-    the shell and presses control-C, signal SIGINT is sent to both
-    the shell process and the running command process
-    (i.e., all the processes in the <em>foreground</em>
-    process group).</font>
-    (Review Sections 9.4 (Process Groups), 9.5 (Sessions), and
-    9.6 (Controlling Terminal) of Stevens and Rago's 
-    <a href="http://proquestcombo.safaribooksonline.com/book/programming/unix/9780321638014">APUE book</a> for details.)
-    </li>
-  <li> The shell should treat Ctrl-D and the 
-  <a href="http://www.computerhope.com/jargon/e/eof.htm">EOF</a> char in a similar way csh/tcsh
-    do when the <code>ignoreeof</code> 
-    <a href="http://www.ibm.com/developerworks/aix/library/au-tcsh/">tcsh shell variable</a> is set, i.e., ignore it,
-    instead of exiting or seg-faulting.  Note that Ctrl-D is not a signal,
-    but the EOF char. If <code>ignoreeof</code> is set to the empty string or '0' and the input device is a terminal, the end-of-file command (usually generated by the user by typing '^D' on an empty line)
-    causes the shell to print 'Use "exit" to leave tcsh.' instead of exiting. This prevents the shell from accidentally being killed. If set to a number n, the shell ignores n - 1 consecutive end-of-files and exits on the nth. 
-    If unset, '1' is used, i.e. the shell exits on a single '^D'. 
-    Review all the
-    <a href="https://nature.berkeley.edu/~casterln/tcsh/Special_shell_variables.html">shell variables of tcsh</a>. 
-    (Please review the <b><em>difference</em></b> between
-    <a href="https://askubuntu.com/questions/26318/environment-variable-vs-shell-variable-whats-the-difference">Shell Variables and Environment Variables</a>.) 
-    You may also review 
-    <a href="https://www.eecis.udel.edu/~cshen/361/PA_3_Simple_Shell/sample-code/fgets_ctrl_D.c">this code</a> to see
-    how <code>fgets()</code> works with EOF. </li>
-  <li> Your code should do proper error checking. Again, check man pages for
-    error conditions, and call <code>perror(3)</code> as needed.  Also
-    avoid memory leaks by calling <code>free(3)</code> as needed.</li>
-</ol>
-<h4>Built-in Commands to support</h4>
-<ul>
-  <li> <b><code>exit</code></b> - obvious!</li>
-  <li> <b><code>which</code></b> - same as the tcsh one (hint: you can write a
-  function to do this and use it for finding the command to execute)
-  [Review <code>get_path_main.c</code> in
-  <a href="https://www.eecis.udel.edu/~cshen/361/PA_3_Simple_Shell/skeleton-code">shell skeleton code</a> for details]</li>
-  <li> <b><code>where</code></b> - same as the tcsh one (reports all
-       known instances of <i>command</i> in path)
-  [Review <code>get_path_main.c</code> in
-  <a href="https://www.eecis.udel.edu/~cshen/361/PA_3_Simple_Shell/skeleton-code">shell skeleton code</a>]</li>
-       
-  <li> <b><code>cd</code></b> - <code>chdir(2)</code> to the directory given; with no arguments,
-       chdir to the home directory; with a '-' as the only argument, chdirs to directory
-       <b>previously in</b>, the same as what tcsh does. [Review Stevens and Rago's Section 4.23 for details and <font color="blue">the reason why cd has to be implemented as a built-in command</font>]</li>
-  <li> <b><code>pwd</code></b> - print the current working directory.
-       [Review <code>getcwd.c</code> in
-       <a href="https://www.eecis.udel.edu/~cshen/361/PA_3_Simple_Shell/sample-code">sample code</a>;
-       review Stevens and Rago's Section 4.23 for details]</li>
-  <li> <b><code>list</code></b> - with no arguments, lists the files in the
-       current working directory one per line.  With arguments, lists the files in
-       each directory given as an argument, with a blank line then the name
-       of the directory followed by a : before the list of files in that
-       directory.   You will need to use <code>opendir(3)</code> and
-       <code>readdir(3)</code>. (Hint: read their respective man pages carefully,
-       and refer to Fig. 1.3 of Stevens and Rago's APUE book)</li>
-  <li> <b><code>pid</code></b> - prints the pid of the shell</li>
-  <li> <b><code>kill</code></b> - When given just a pid, sends a SIGTERM to
-       the process with that pid using <code>kill(2)</code>.  When given a signal number (with a -
-       in front of it), sends that signal to the pid. 
-       (e.g., <code>kill 5678</code>, <code>kill -9 5678</code>).
-       Read the man page of <code>kill(2)</code> to check for
-       return value of -1 on error and the 'errno' value of ESRCH (3)
-       for "No such process."
-       </li>
-  <li> <b><code>prompt</code></b> - When ran with no arguments, prompts for
-       a new prompt prefix string.  When given an argument make that the
-       new prompt prefix. For instance, let's assume <code>cwd</code>
-       is <code>/usa/cshen</code>.</li>
-<pre> [/usa/cshen]&gt; prompt CISC361
-CISC361 [/usa/cshen]&gt; _
-CISC361 [/usa/cshen]&gt; cd 361
-CISC361 [/usa/cshen/361]&gt; prompt YES
-YES [/usa/cshen/361]&gt; prompt
-  input prompt prefix: hello
-hello [/usa/cshen/361]&gt; _
+<p>
+When a parent process does <b>not</b> (get the chance to) do a
+<code>wait(2)</code> call
+for its children, the children will become <b>zombie</b> processes
+(marked by &lt;defunct&gt; in Linux or Z) when they exit or die
+involuntarily (e.g., killed). To prevent
+this for your backgrounded processes (jobs), you need to do a
+<i>nonblocking</i> <code>waitpid(2)</code> call at some point
+(by using the WNOHANG option). See the man page for options to
+use to <b>reap</b> an entry in a nonblocking fashion. 
+<font color="blue">It is suggested that you do this before
+printing the next prompt.</font>
+If the parent has a zombie child, the call
+will <span style="font-weight: bold;">reap</span> the process entry,
+otherwise no harm is done either. Check out sample
+<a href="https://www.eecis.udel.edu/~cshen/361/PA_4_More_Features/Zombie.zip">zombie code</a> that deliberately creates 
+a zombie process. Also check out <code>mysh_bg.c</code>, 
+<code>slp_exit.c</code>, and <code>slp_killed.c</code> in
+<a href="https://www.eecis.udel.edu/~cshen/361/PA_4_More_Features/sample-code">sample code</a>
+to "play with" background processes and zombies.
+</p></li>
+
+<p> <b><font color="red">Extra Credit (10 points)</font></b>:
+Implement the '<b>fg</b>' built-in
+command to bring a backgrounded job into the foreground.  With no
+arguments, a default backgrounded job will be chosen.  It should also
+take an argument to specify which backgrounded job to bring to the
+foreground.  Add your own test to show this works and clearly document
+if you implement this.  Your shell should work just like when a job
+isn't backgrounded when a job is brought into the foreground.
+<font color="blue">Refer to Sections 9.8 and 9.9 of Stevens and Rago's
+APUE book.</font> 
+</p>
+  
+
+<li>Add support to your shell so the following <b>file redirections</b> will
+work: (review <a href="http://pages.cs.wisc.edu/~remzi/OSTEP/cpu-api.pdf">OSTEP Chapter 5.4 Why? Motivating The API</a> for details)<br>
+    <ul>
+      <li> <b>&gt;</b> (i.e., command &gt; file) - redirect standard output (stdout) of command on the left
+to file on the right. </li>
+      <li> <b>&gt;&amp;</b> (i.e., command &gt;&amp; file) - redirect both standard output (stdout) and standard error (stderr) of command on the left to file on the right. </li>
+      <li> <b>&gt;&gt;</b> (i.e., command &gt;&gt; file) - redirect standard output (stdout) of command on the left to file on the right, <i>appending</i> to the file. </li>
+      <li> <b>&gt;&gt;&amp;</b> (i.e., command &gt;&gt;&amp; file) - redirect both standard output (stdout) and standard error (stderr) of command on the left to file on the right, <i>appending</i> to the file. </li>
+      <li> <b>&lt;</b> (i.e., command &lt; file) - redirect standard input (stdin) of command on the left to come from file on the right.</li>
+    </ul>
+    <p> To do the file redirection requires that you understand file
+descriptors well (a child process inherits file descriptors
+from its parent and open file descriptors are left open across 
+<code>exec()</code> [Stevens and Rago' APUE, p. 252]).
+You will need to close and reopen file descriptors 
+0, 1, or 2. For this, you will need to use <code>open()</code>, 
+<code>close()</code> and <code>dup()</code> system calls. 
+(Refer to Section 3.12 of Stevens and Rago's APUE book 
+for dectails of <code>dup()</code>.)
+Please use <code>dup(2)</code> instead of <code>dup2(2)</code>.
+The new file descriptor returned by <code>dup(2)</code> is guaranteed
+to be the <i>lowest-numbered available</i> file descriptor.
+This does not require a lot of code, just the right calls in the right
+places. To get the normal function of stdin, stdout and stderr back,
+opening of <code>/dev/tty</code> will be required. Be sure to use the
+right options for <code>open()</code> in each situation (i.e.,
+read/write, truncate/append). Read man pages! </p>
+    <p> To help out in testing both stdoue and stderr, there is a small
+program <a href="https://www.eecis.udel.edu/~cshen/361/PA_4_More_Features/sample-code/test-1+2.c">test-1+2.c</a>.
+Compile it as execuatble test-1+2 and use it in test runs. 
+Sample code to redirect stdout to a file: 
+</p><pre> 
+  fid = open(filename, O_WRONLY|O_CREAT|O_TRUNC, S_IRUSR|S_IWUSR|S_IRGRP);
+  close(1);
+  dup(fid);
+  close(fid);
 </pre>
-  <li> <b><code>printenv</code></b> - Should work the same as the tcsh
-       built-in one.  When ran with no arguments, prints the whole environment.
-       (This can be done in 2 lines of code, a <code>printf()</code> inside
-       of a <code>while</code> loop by accessing the extern
-       <code>environ</code> variable, not counting a variable 
-       declaration).
-       When ran with one argument, call <code>getenv(3)</code> on it.  When
-       called with two or more args, print the same error message to stderr
-       that tcsh does.
-       (Review Stevens and Rago's Section 7.5 Environment List [and
-       Section 7.4 Command-Line Arguments] for details.) </li>
-<!--
-  <li> <b><code>alias</code> </b> - Should work the same as the tcsh
-       built-in one.  When ran with no arguments prints the aliases the
-       shell knows about.  When ran with arguments it should install an
-       alias into the alias table the shell knows about.  Additionally,
-       the shell needs to be able to run your aliases to receive full
-       credit.  Supply your own test cases to show that it works. </li>
-  <li> <b><code>history</code> </b> - Should print the last <em>n</em> commands (by
-       default <em>n</em> is 10) executed when ran with no options.  When ran with
-       a numerical argument changes the number of commands to list to that
-       number. [No need to save history across shell sessions.]
--->
-  <li> <b><code>setenv</code></b> - 
-       Should work the same as the tcsh built-in one.  When ran with no
-       arguments, prints the whole environment, the same as 
-       <code>printenv</code>.  When ran with one argument, sets that as
-       an empty environment variable.  When ran with two arguments, the
-       second one is the value of the first.  When ran with more args,
-       print the same error message to stderr that tcsh does.  You can
-       use the <code>setenv(3)</code> function for this command.
-       Special care must be given when PATH and HOME are changed.  When
-       PATH is changed, be sure to update your linked list for the path
-       directories (and <code>free()</code> up the old one).  When HOME is changed,
-       <code>cd</code> with no arguments should now go to the new home.  
-       (Review Stevens and Rago's <a href="http://proquestcombo.safaribooksonline.com/book/programming/unix/9780321638014/7dot-process-environment/ch07lev1sec9_html">Section 7.9 Environment Variables</a> for details.) </li>
-<!--
-  <li> <b><code>copy</code> </b> -
-       Should work the same as '<code>cp -i file1 file2</code>'.  When ran
-       with anything other than two arguments it should print an error
-       message.  This needs to be implemented using the <code>open(2),
-       read(2), write(2) and close(2)</code> system calls.  You may find the
-       <code>access(2)</code> system call useful also.
-       Test with different size files and with file2 existing and
-       not existing.  Be sure to test where file2 exists and is bigger than
-       file1.  Provide your own test cases.
-       </li>
--->
-</ul> 
+To redirect stdout <b>back</b> to the terminal,
+replace the <code>open()</code> with
+<pre>  fid = open("/dev/tty", O_WRONLY);
+</pre>
+and repeat the other 3 system calls.
 
-<h4>How to get started</h4>
-It is recommendated to first get the loop working to find a command, i.e.,
-implement <code>which</code> first.  Then you will be able to create a new process
-with <code>fork(2)</code> and use <code>execve(2)</code> in the child process
-and <code>waitpid(2)</code> in the parent.  Then handle arguments and do
-the other built-ins.  Remember to the read man pages for
-system and library calls, include the corresponding header files.
-<br><br>
-A skeleton code to get started with is <a href="https://www.eecis.udel.edu/~cshen/361/PA_3_Simple_Shell/skeleton-code">here</a>.
-Example code of using <code>fork(2)</code> and <code>exec(2)</code>
-can be found <a href="https://www.eecis.udel.edu/~cshen/361/PA_3_Simple_Shell/sample-code">here</a>.
-<br>
-
-<h4>Some more library functions that may be helpful</h4>
-<code>atoi(3), fprintf(3), index(3), calloc(3), malloc(3), 
-memcpy(3), memset(3), getcwd(3), strncmp(3),  strlen(3).
-</code>
-
-<h4> About <code>which</code> and <code>where</code></h4>
-
-The best way to learn how the <code>which</code> and <code>where</code> commands work is to use the
-following 3 programs (that are part of the Shell skeleton code) to
-create an executable as follows.
-<pre>get_path.c    get_path.h    get_path_main.c
+    <p> Additionally, add the <b>noclobber</b> built-in command which
+will affect how these redirection operators handle file creation.
+All the <b>noclobber</b> command should do is to "switch" the value of the <code>noclobber</code> 
+<a href="http://www.ibm.com/developerworks/aix/library/au-tcsh/">tcsh shell variable</a>
+(to prevent accidental overwriting of existing files) from 0 to 1 or 
+from 1 to 0 and print out the new value of it, as follows.
+</p><pre>[cisc361:/usa/cshen/361/PA_4/SHELL 737] ./mysh
+&gt;&gt; noclobber
+Executing built-in [noclobber]
+1
+&gt;&gt; noclobber
+Executing built-in [noclobber]
+0
+&gt;&gt; noclobber
+Executing built-in [noclobber]
+1
+&gt;&gt; exit
+Executing built-in [exit]
+[cisc361:/usa/cshen/361/PA_4/SHELL 739] 
 </pre>
 
-<pre>$ gcc get_path.c get_path_main.c
-$ ./a.out
-</pre>
-
-In <b>tcsh</b>, you can append a directory called /usr/local/bin to the END of search path by entering the following command and then print the new value.
-<pre>$ set path = ($path /usr/local/bin)
-$ echo $path
-</pre>
-
-To add the directory to the FRONT of search path, do
-<pre>$ set path = (/usr/local/bin $path)
-</pre>
-
-In <b>bash</b>, to add the directory to the END of search path, do 
-<pre>$ export PATH=$PATH:/usr/local/bin
-</pre>
-
-To add to the FRONT of path, do
-<pre>$ export PATH=/usr/local/bin:$PATH
-</pre>
-
-Both <code>which</code> and <code>where</code> will start searching for the target executable from the front of the path/PATH value.
-
-<h3>Test Runs</h3>
-Test your shell by running the following commands in it (in order):<br>
-<pre>[return]
-Ctrl-D
-Ctrl-Z
-Cotrl-C
-which					; test which
-which ls
-ls					; execute it
-[return]
-Ctrl-D					; make sure still work
-Ctrl-Z
-Ctrl-C
-ls -l					; test passing arguments
-ls -l -a /proc/tty
-ls -l -F /proc/tty
-ls -l -F /etc/perl
-ls -l -a /etc/perl
-where					; test where
-where ls
-/bin/ls -l -g			; test absolutes and passing args
-/bin/ls -l
-file *					; test out * wildcard
-ls *
-ls *.c
-ls -l sh.*
-ls -l s*.c
-ls -l s*h.c
-<!--
-ls sh.?					; test out ? wildcard
-ls ?h.c	
-ls *.?					; test combination of ? and *	-->
-blah					; try a command that doesn't exist
-/blah					; an absolute path that doesn't exist
-ls -l /blah
-/usr/bin				; try to execute a directory
-/bin/ls -la /
-file /bin/ls /bin/rm
-which ls rm				; test multiple args
-where ls rm
-list					; test list
-list / /usr/bin
-cd 					; cd to home
-pwd
-cd /blah				; non-existant
-cd /usr/bin /usr/ucb			; too many args
-cd -					; should go back to project dir
-pwd
-more sh.c   (and give a Crtl-C)		; more should exit
-cd /usr/bin
-pwd
-./ls /					; test more absolutes
-../bin/ls /
-pid					; get pid for later use
-kill
-kill pid-of-shell			; test default
-kill -1 pid-of-shell			; test sending a signal, should kill
-					; the shell, so restart a new one
-prompt	    (and enter some prompt prefix)
-prompt 361shell
-printenv PATH
-printenv
-setenv
-setenv TEST
-printenv TEST
-setenv TEST testing
-printenv TEST
-setenv TEST testing more
-setenv HOME /
-cd
-pwd
+The <code>noclobber</code> shell variable should initially default to 0
+and cause your shell to act the same way as csh/tcsh does with respect
+to the <code>noclobber</code> shell variable as shown below.
+That is when it is 0, &gt; and &gt;&amp; will overwrite
+existing files and &gt;&gt; and &gt;&gt;&amp; will create the file if
+it doesn't exist. When <code>noclobber</code> is 1, your shell should
+refuse to overwrite existing files (for &gt; and &gt;&amp;), refuse to create a (new) file for
+appending (for &gt;&gt; and &gt;&gt;&amp;), and print the same error messages csh/tcsh do in those
+situations as follows. Note that in csh/tcsh, <code>noclobber</code>
+initially defaults to "set" (i.e., value 1).<br>
+<pre>[cisc361:/usa/cshen/361/PA_4/SHELL 761] tcsh
+unknown OS
+cisc361[31] [~/361/PA_4/SHELL/]&gt; ls file*
+file_1
+cisc361[32] [~/361/PA_4/SHELL/]&gt; more file_1
+hello
+cisc361[33] [~/361/PA_4/SHELL/]&gt; echo world &gt; file_1
+file_1: File exists.
+cisc361[34] [~/361/PA_4/SHELL/]&gt; echo world &gt; file_2
+cisc361[35] [~/361/PA_4/SHELL/]&gt; echo hello &gt;&gt; file_2
+cisc361[36] [~/361/PA_4/SHELL/]&gt; more file_2
+world
+hello
+cisc361[37] [~/361/PA_4/SHELL/]&gt; echo kitty &gt;&gt; file_3
+file_3: No such file or directory.
+cisc361[38] [~/361/PA_4/SHELL/]&gt; unset noclobber
+cisc361[39] [~/361/PA_4/SHELL/]&gt; more file_1
+hello
+cisc361[40] [~/361/PA_4/SHELL/]&gt; echo good job &gt; file_1
+cisc361[41] [~/361/PA_4/SHELL/]&gt; more file_1
+good job
+cisc361[42] [~/361/PA_4/SHELL/]&gt; ls file*
+file_1	file_2
+cisc361[43] [~/361/PA_4/SHELL/]&gt; echo good luck &gt;&gt; file_3
+cisc361[44] [~/361/PA_4/SHELL/]&gt; more file_3
+good luck
+cisc361[45] [~/361/PA_4/SHELL/]&gt; echo bye bye &gt;&gt; file_1
+cisc361[46] [~/361/PA_4/SHELL/]&gt; more file_1
+good job
+bye bye
+cisc361[47] [~/361/PA_4/SHELL/]&gt; exit
 exit
+[cisc361:/usa/cshen/361/PA_4/SHELL 762] 
 </pre>
-
-<h3>Notes </h3>
-<ul>
-<li> Please run your shell under <code>valgrind --leak-check=full</code> 
-     to check for any memory leaks.
-</li><li> The next project builds upon this project.  It is important to have
-minimal functionality of this project in order to complete the next
-project. 
-</li></ul>
-
-<!--
-<h3>Extra Credits (5 points) </h3>
-Turn your shell into one that will restrict the execution time of
-a running command (process). Your shell will execute a command as a
-new process, but if the process exceeds a 'timeout' value in seconds,
-it will be killed.  You will start your shell with one argument
-stating the timeout value (in seconds).  For instance,
-<pre>
-$ ./myshell 5
-mysh >>
-mysh >> cat
-!!! taking too long to execute this command !!!
-mysh >>
-mysh >>
+In light of the actual outputs from csh/tcsh, your shell would behave
+as follows.
+<pre>&gt;&gt; ls file_*
+Executing [/bin/ls]
+file_1  file_2
+&gt;&gt; noclobber
+Executing built-in [noclobber]
+1
+&gt;&gt; echo world &gt; file_1
+Executing built-in [echo]
+file_1: File exists.
+&gt;&gt; echo world &gt;&gt; file_4
+Executing built-in [echo]
+file_4: No such file or directory.
 </pre>
-<font color="red">You may NOT use multi-threading to implement
-this feature.</font>
--->
+    <p></p>
+  </li>
+
+<li> Add support for interprocess communication (IPC). This is adding
+support for <b>|</b> and <b>|&amp;</b>. The | operator should pipe
+standard output of the command on the left to standard input of the
+command on the right (i.e. command1 | command2). For |&amp;, standard
+error should be piped as well as standard output. 
+<font color="blue">It is only required
+that this works when the command on the right is an external command,
+the one on the left could be either built-in or external.</font>
+You also need to avoid generating zombie processes!
+
+<pre>[cisc361.acad.ece.udel.edu:/usa/cshen 132] tcsh
+cisc361[29] [~/]&gt; which echo
+echo: shell built-in command.
+cisc361[30] [~/]&gt; echo hello world | wc
+       1       2      12
+cisc361[31] [~/]&gt; 
+</pre>
 
 <p>
+</p><pre>cisc361[34] [~/361/2018/apue.3e/intro/]&gt; 
+cisc361[34] [~/361/2018/apue.3e/intro/]&gt; ls X
+X: No such file or directory
+cisc361[35] [~/361/2018/apue.3e/intro/]&gt; ls X | wc
+X: No such file or directory
+       0       0       0
+cisc361[36] [~/361/2018/apue.3e/intro/]&gt; ls X |&amp; wc
+       1       6      29
+cisc361[37] [~/361/2018/apue.3e/intro/]&gt; 
+</pre>
 
-</p><hr>
-<h3>Grading </h3>
-<ul>
-  <li> 90% correctly working shell
-       (<a href="https://www.eecis.udel.edu/~cshen/361/PA_3_Simple_Shell/checklist.html">checklist</a>)</li>
-  <li> 10% documentation and code structure (remember to check error
- situations and avoid too much duplicate code)</li>
+<p>
+To implement this, you will need to use <code>pipe(2)</code>.
+To implement pipes, file descriptor redirection will be
+required again by using <code>close()</code> and <code>dup()</code>.
+(Refer to Section 3.12 of Stevens and Rago's APUE book 
+for dectails of <code>dup()</code>.)
+However you will be getting open file descriptors by using <code>pipe(2)</code>
+instead of <code>open()</code>. This task is a bit trickier than the
+previous, but again does not take much code. It will take some trials
+and thinking to get right. You will probably need to move your command
+running code to a new function which takes info about the style of the
+pipe (if any) and which side of the pipe this command will be on. The
+left side of the pipe needs to not cause the parent to do a blocking
+wait, while the right side does. </p>
+    <p> Once the parent process (your shell) has created a pipe and
+forked the two child processes that will write and read from the pipe,
+make sure the parent (your shell) explicitly closes the file
+descriptors for its read and write access to the pipe. If you fail
+to do this, the (right) child
+reading from the pipe will never terminate. This is because the child
+reading from the pipe will never get the END-OF-FILE (end-of-pipe)
+condition (and hence never terminate) as long as one process (in this
+case your shell, by mistake) has an open write file descriptor
+for the pipe. The overall result will be a deadlock - your shell
+waiting for a child to terminate and the child waiting for the shell to
+close the pipe, which was inadvertently left open. 
+Check out <code>mysh_pipe.c</code> in
+<a href="https://www.eecis.udel.edu/~cshen/361/PA_4_More_Features/sample-code">sample code</a> to see how
+pipe works in the simplest shell possible.
+<font color="red">(Review
+<a href="http://beej.us/guide/bgipc/html/multi/pipes.html">Pipes</a>
+and Section 9.9 of Stevens and Rago's APUE book for dectails.)</font>
+
+    </p>
+    <p> This part will also require that your command line processing
+puts the arguments into two separate argument vectors. And do not use <code>popen()</code>;
+you will get <font color="red">no credit</font>. <br>
+    </p>
+  </li>
+
+<!--
+  <li> Add the <b><code>warnload</code></b> built-in command.
+This command will start up a thread using
+<b><code>pthread_create(3)</code></b> that will run a
+<code>while (TRUE) </code> loop with a <code>sleep(3)</code>
+call for 30 seconds in it, the first time it is invoked correctly.
+The command will take a positive floating point number for a load
+level to warn if the system's 1 minute load average gets higher than
+that. The warn level should be a global variable and subsequent runs 
+of this
+command will just change that variable and not start another thread.
+When a warning level of 0.0 (zero) is given, the thread should notice
+this and call <code>pthread_exit(3)</code> to stop running, after
+setting a global value so that a subsequent invocation can start up a
+new thread running. When the thread notices that the load is higher
+than the specified threshold it should print out "Warning load level
+is LOAD", where LOAD is the current system load.
+(<a href="pthread.c">sample pthread code</a>)
+
+<pre>
+mysh % warnload 3.8
+mysh % warnload 4.5
+mysh % warnload 0.0
+</pre>
+
+    <p> Some code to get the systems' current load level is
+    <a href="showload.c">here</a>.
+This code will work on Solaris and requires linking in the kstat
+library (add <code>-lkstat</code> in your Makefile and also
+<code>-DHAVE_KSTAT</code>). This
+code shows how to get the three load averages (1min, 5min and
+15min). You will just need to get the 1min load average for this
+command. <br>
+    </p>
+--->
+
+<li> Add the <b><code>watchuser</code></b> built-in command.
+This command takes as its first argument a username to keep track
+of when the user logs on,&nbsp; similar to the <code>watch</code> 
+shell variable in tcsh 
+(review <a href="http://www.ibm.com/developerworks/aix/library/au-tcsh/">tcsh shell variables</a> 
+under <font color="blue">Enhanced security in tcsh: Monitor
+everyone who's using the system</font>.).
+This command also takes a
+second optional argument of "off" to stop watching a user.
+The <font color="red">first time</font>
+<b><code>watchuser</code></b> is ran, a (new) thread should be
+created/started via <b><code>pthread_create(3)</code></b>, which
+runs a <code>while (TRUE)</code> loop with a <code>sleep(3)</code>
+call for 20 seconds in it to track logins of users.
+<font color="red">Only one <b><code>watchuser</code></b>
+thread should ever be running.</font> 
+The thread should get the list of users from a
+<span style="font-style: italic;">global linked list</span>
+which the calling function (of the main thread) will modify by
+either inserting new users or turning off existing watched users. 
+For instance,
+<pre>mysh % watchuser cshen
+mysh % watchuser smith
+mysh % watchuser joe
+mysh % watchuser smith off
+</pre>
+    <p> This thread should prin a message "USER has logged on TTY
+    from HOST." to the terminal
+    when it FIRST detects that a user from the watch list logs
+    on to a new tty.
+Sample code to obtain the list of currently
+logged in users can be found
+<a href="https://www.eecis.udel.edu/~cshen/361/PA_4_More_Features/sample-code/showusers.c">here</a>. 
+</p>
+
+<p>Upon exiting from the shell, the <b><code>watchuser</code></b> thread
+should be cancelled via <b><code>pthread_cancel(3)</code></b>
+and "waited for" by <b><code>pthread_join(3)</code></b> to prevent
+memory leak. (Check out <code>thread_cancel.c</code> in
+<a href="https://www.eecis.udel.edu/~cshen/361/PA_4_More_Features/sample-code">sample code</a> and compare the valgrind outputs
+without and with line 33.)
+
+     </p><p> Since the calling function (of the main thread) and the
+<code>watchuser</code> thread have access to share data
+(e.g., the global linked list of users to be watched), the shared data
+must be protected with a <b>mutex</b> lock using
+<code>pthread_mutex_lock(3)</code> and 
+<code>pthread_mutex_unlock(3)</code>.
+    </p>
+<p> <b><font color="red">Extra Credit (5 points)</font></b>: 
+Also have your thread notify when the users
+being watched log off of a tty. Make it clear that you do this if
+you do, and document it well. </p>
+  </li>
+
 <!---
-  <li> Have your completed project turned in to the TA (email, hard copy and
-  demo scheduled) by September 27 and receive <b>five (5) extra credit
-   points.</b></li>
-  <li>If you would like to demo your project to the TA rather than have them
-   grade it on their own schedule a time with the TA to do so.
-    </li>
+  <li> Add the <b><code>watchmail</code></b> built-in command. This
+command
+takes as the first argument a name of a file, which must already exist
+(give an error if it doesn't), to watch for new `mails' in. It can take
+an optional second argument of "off" to turn off of watching of mails
+for that file. It should start up a new thread using <code>pthread_create(3)</code>
+<font color="red">for each file to watch for mail in</font>
+(the name of the file is passed as a parameter to the thread).
+This function, to watch for new mail, should run a <code>while
+(1)</code> loop, which will do a <code>stat(2)</code> to see if the
+file got bigger since the last check. A sleep for 1 second should be in
+the loop. The <code>st_size</code> member
+of a <code>stat</code> struct can be used to check the size of the
+file. When the file increases in size, the thread, for that file,
+should print out:<br>
+    <br>
+    <code> BEEP You've Got Mail in FILE at TIME </code> <br>
+    <br>
+The BEEP should be done with a <code>\a</code> in <code>printf()</code>.
+FILE should be the name of the file that the thread is watching. And
+TIME should be the current time in <code>ctime(3)</code> format. To
+get the current time use <code>gettimeofday(3)</code> and pass <code>tv_sec</code>
+of the <code>timeval</code> struct to <code>
+ctime()</code>.
+
+<pre>
+mysh % watchmail mbox
+mysh % watchmail /usr/cshen/pobox
+mysh % watchmail mbox off
+</pre>
+
+    <p> When the "off" parameter is given, the thread that is watching
+that file needs to be canceled with <code>pthread_cancel(3)</code>.
+A linked list of active threads and files associated with each one
+should be maintained to support this. When an error condition happens
+in a thread, <code>pthread_exit(3)</code> should be used. Your
+program should support watching multiple files. A separate thread
+will run to check each file. <br>
+    </p>
+  </li>
+
+<p> Note that these two threaded "watch" commands will print
+messages when
+certain things happen, which could be annoying when using the shell for
+normal functioning. However if you have multiple windows open, they
+could be useful to run in one for notification.
+As always, document your code well and explain how things work. 
+</p>
 -->
+
+  <li> As always document your code well and explain how things work.
+It is only necessary that one of &amp;, the file redirections and
+piping work at a time for this project. Remember that man pages are
+your best friends and you may find using <code>strace(1)</code> useful. 
+</li>
 </ul>
 
-<h3>Turn In </h3>
 
+
+<h3>Test Runs </h3>
+<p> To test '&amp;', show running some commands in the background in
+your script. 
 <!--
-Turn in all of your code, a script of the test runs (show doing a `make
-clean' followed by a make to build your shell) for Solaris (it should also
-work for Linux) for your well documented program by email to the TA in a tar
-file.  No hard copy is needed.  The only thing that needs to be printed out
-is the <a href="checklist.html">checklist</a> which you should take with you
-to the demo with the TA.
+To test warnload run <code>uptime</code>, then show that
+warnload works by picking a load level lower than the current system
+load, then higher, then turn it off with a 0, then test that it works
+again by running with a lower load level than current.
+To test watchmail
+you can simply make the file larger in another window a couple of
+times. Also test for turning off watching a file. 
 -->
-<p>
-You need to tar up your source code, test run script file, etc.
-To do this, do the following.
+To test watchuser, come
+up with your own tests. The TAs will test each feature. </p>
 
-</p><ul>
-<li> In the current working directory, create a 
-(sub-)directory named <code>proj3</code> to store all your programs.
+<p> Test your shell by running the following commands in it (in order): 
+(ignore all the watchmail commands)
+</p>
+<pre>    pwd<br>    ls &amp;<br>    ls -l &amp;<br>    cd /<br>    sleep 20 &amp;<br>    ls &amp; 			; run before sleep is done<br>    pid<br>    tty<br>    /bin/ps -lfu USERNAME	; replace USERNAME with your own  <br>    cd<br>    cd [project test dir of your choosing]<br>    pwd<br>    ls -l<br>    rm -f test1 test2 test3 test4 test5 test6 test7 test8<br>    ./test-1+2 &gt; test1<br>    ./test-1+2 &gt;&gt; test2<br>    ./test-1+2 &gt;&amp; test3<br>    ./test-1+2 &gt;&gt;&amp; test4<br>    cat test1 test2 test3 test4<br>    ./test-1+2 &gt; test1<br>    ./test-1+2 &gt;&gt; test2<br>    ./test-1+2 &gt;&amp; test3<br>    ./test-1+2 &gt;&gt;&amp; test4<br>    cat test1 test2 test3 test4<br>    noclobber				; turn noclobber on<br>    ./test-1+2 &gt; test5<br>    ./test-1+2 &gt;&gt; test6<br>    ./test-1+2 &gt;&amp; test7<br>    ./test-1+2 &gt;&gt;&amp; test8<br>    cat test5 test6 test7 test8<br>    ./test-1+2 &gt; test5<br>    ./test-1+2 &gt;&gt; test6<br>    ./test-1+2 &gt;&amp; test7<br>    ./test-1+2 &gt;&gt;&amp; test8<br>    cat test5 test6 test7 test8<br>    grep hello &lt; test8<br>    grep error &lt; test8<br>    rm -f test9 test10 test11 test12<br>    noclobber				; turn noclobber off<br>    ./test-1+2 &gt; test9<br>    ./test-1+2 &gt;&gt; test10<br>    ./test-1+2 &gt;&amp; test11<br>    ./test-1+2 &gt;&gt;&amp; test12<br>    cat test9 test10 test11 test12<br>    ls | fgrep .c                   ; show pipes works<br>    ./test-1+2 | grep  hello<br>    ./test-1+2 |&amp; grep hello<br>    ./test-1+2 | grep output<br>    ./test-1+2 |&amp; grep output<br>    ./test-1+2 |&amp; grep error<br>    pid                                        ; zombie avoidance checking<br>    /bin/ps -lfu USERNAME | grep defunct       ; replace USERNAME with your username<br>    </pre>
+<!-- 
+If your file redirection doesn't work then use another shell to modify
+your mailfiles to test your watchmail command. The TA will also test
+each feature.
+-->
+<p></p>
 
-</li><li>
-<pre>tar cvf YourName_proj3.tar proj3</pre> 
-</li></ul>
-
-To verify that your files are in the tar file take a look at the table of
-contents of the tar file like:
-<pre>tar tvf YourName_proj3.tar
-</pre>
+<h3>Grading </h3>
+<ul>
+  <li> 20% for adding &amp; support (including avoiding zombies)</li>
+  <!-- <li> 10% for warnload </li> -->
+  <!-- <li> 15% for watchmail </li> -->
+  <li> 15% for watchuser (for log ins and mutex locking)</li>
+  <li> 20% for file redirection </li>
+  <li> 20% for interprocess communications </li>
+  <li> 10% documentation and code structure (remember to check error
+       situations and avoid too much duplicate code)</li>
+  <li> 10% extra credit for fg</li>
+  <li> 5% extra credit for watchuser (for log outs)</li>
+</ul>
+<h3>Turn In </h3>
+<p>You need to tar up your source code and submit the tar file so
+that your shell can be tested and graded. To do this, </p>
+<ul>
+<li> Put all the source files of your Programming Assignment #4 into a subdirectory named YourLoginName_4.</li>
+<li> At the current working directory, do<br>
+<pre>zip -r YourLoginName_4 YourLoginName_4<br></pre></li>
+<li> Upload file <b>YourLoginName_4.zip</b> to Canvas.</li>
+</ul>
 
 
 </body></html>
