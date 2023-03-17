@@ -8,8 +8,6 @@
 
 int expand_n_wildcards(char *arguments[], char *execargs[], int max_args)
 {
-    // char **execargs = *out_execargs;
-
     glob_t globPaths; // an array of aguments for execve()
     int csource,      // result of glob
         i, j;         // current arguments and execargs index
