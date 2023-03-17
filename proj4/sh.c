@@ -103,7 +103,7 @@ int main(int argc, char **argv, char **envp)
       buffer[strlen(buffer) - 1] = 0; // replace newline with null
 
     // parse command line into tokens (stored in buffer)
-    expand_n_arguments(buffer, arguments, MAXARGS);
+    str_split_n(buffer, " ", arguments, MAXARGS);
 
     // Our first argument should be the program/command. If null, we have nothing to execute
     if (arguments[0] == NULL)

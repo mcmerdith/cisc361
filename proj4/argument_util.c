@@ -69,12 +69,12 @@ int expand_n_wildcards(char *arguments[], char *execargs[], int max_args)
     return 1;
 }
 
-void expand_n_arguments(char *buffer, char *arguments[], int max_args)
+void str_split_n(char *buffer, char *delimiter, char *arguments[], int max_args)
 {
     int i;
     char *saveptr;
-    arguments[0] = strtok_r(buffer, " ", &saveptr);
-    for (i = 1; (arguments[i] = strtok_r(NULL, " ", &saveptr)) != NULL && i < max_args - 1; ++i)
+    arguments[0] = strtok_r(buffer, delimiter, &saveptr);
+    for (i = 1; (arguments[i] = strtok_r(NULL, delimiter, &saveptr)) != NULL && i < max_args - 1; ++i)
         ;
     arguments[i] = NULL; // make sure that last element is null
 }
@@ -89,12 +89,12 @@ char *join_array(char *array[], char *delimiter)
 
     for (char **p = &array[1]; *p != NULL; ++p)
     {
-        temp = calloc(strlen(joined_string) + strlen(*p) + 2, sizeof(char)); // allocate a buffer to do the joining
-        strcpy(temp, joined_string);                                         // copy the current string into temp;
-        strcat(temp, " ");                                                   // space
-        strcat(temp, *p);                                                    // new segment
-        free(joined_string);                                                 // free previous segment
-        joined_string = temp;                                                // update new segment
+        temp = calloc(strlen(joined_string) + strlen(*p) + strlen(delimiter) + 1, sizeof(char)); // allocate a buffer to do the joining
+        strcpy(temp, joined_string);                                                             // copy the current string into temp;
+        strcat(temp, delimiter);                                                                 // space
+        strcat(temp, *p);                                                                        // new segment
+        free(joined_string);                                                                     // free previous segment
+        joined_string = temp;                                                                    // update new segment
     }
 
     return joined_string;
