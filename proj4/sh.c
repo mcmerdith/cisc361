@@ -50,6 +50,54 @@ void shutdown()
   free(prompt_prefix);
 }
 
+int process_command(char *cmd, char **envp)
+{
+  char *arguments[MAXARGS]; // an array of tokens
+  pid_t pid;                // pid of the executed command
+  int status;               // status of the executed command
+  // parse command line into tokens (stored in buffer)
+  str_split_n(cmd, " ", arguments, MAXARGS);
+
+  // Our first argument should be the program/command. If null, we have nothing to execute
+  if (arguments[0] == NULL)
+    return 0;
+
+  if (try_exec_builtin(arguments))
+  {
+    return 1;
+  }
+  else
+  { // external commands
+    if ((pid = fork()) < 0)
+    {
+      printf("Failed to execute: fork error\n");
+    }
+    else if (pid == 0) // child
+    {
+      char *execargs[MAXARGS]; // args for execve
+      if (!expand_n_wildcards(arguments, execargs, MAXARGS))
+        exit(1); // Skip execution if failure
+      printf("Executing [%s]\n", execargs[0]);
+      execve(execargs[0], execargs, envp); // if execution succeeds, child process stops here
+      printf("couldn't execute: %s\n", cmd);
+      exit(127);
+    }
+
+    // parent
+    if ((pid = waitpid(pid, &status, 0)) < 0)
+      printf("waitpid error\n");
+
+    if (WIFEXITED(status)) // S&R p. 239
+    {
+      int exitcode = WEXITSTATUS(status);
+      if (exitcode != 0)
+        printf("process terminated with code %d\n", exitcode);
+    }
+
+    return 1;
+  }
+}
+
 int main(int argc, char **argv, char **envp)
 {
   printf("\nWelcome to\n");
@@ -62,10 +110,7 @@ int main(int argc, char **argv, char **envp)
 
   shell_pid = getpid();
 
-  char buffer[MAXLINE],    // temporary buffer for fgets
-      *arguments[MAXARGS]; // an array of tokens
-  pid_t pid;               // pid of the executed command
-  int status;              // status of the executed command
+  char buffer[MAXLINE]; // temporary buffer for fgets
 
   // Set up our signal handlers
   struct sigaction action;
@@ -102,45 +147,7 @@ int main(int argc, char **argv, char **envp)
     if (buffer[strlen(buffer) - 1] == '\n')
       buffer[strlen(buffer) - 1] = 0; // replace newline with null
 
-    // parse command line into tokens (stored in buffer)
-    str_split_n(buffer, " ", arguments, MAXARGS);
-
-    // Our first argument should be the program/command. If null, we have nothing to execute
-    if (arguments[0] == NULL)
-      continue;
-
-    if (try_exec_builtin(arguments))
-    {
-      continue;
-    }
-    else
-    { // external commands
-      if ((pid = fork()) < 0)
-      {
-        printf("Failed to execute: fork error\n");
-      }
-      else if (pid == 0) // child
-      {
-        char *execargs[MAXARGS]; // args for execve
-        if (!expand_n_wildcards(arguments, execargs, MAXARGS))
-          exit(1); // Skip execution if failure
-        printf("Executing [%s]\n", execargs[0]);
-        execve(execargs[0], execargs, envp); // if execution succeeds, child process stops here
-        printf("couldn't execute: %s\n", buffer);
-        exit(127);
-      }
-
-      // parent
-      if ((pid = waitpid(pid, &status, 0)) < 0)
-        printf("waitpid error\n");
-
-      if (WIFEXITED(status)) // S&R p. 239
-      {
-        int exitcode = WEXITSTATUS(status);
-        if (exitcode != 0)
-          printf("process terminated with code %d\n", exitcode);
-      }
-    }
+    process_command(buffer, envp);
   }
 
   shutdown();
