@@ -9,6 +9,8 @@
     "stdlib.h": "c",
     "string.h": "c",
     "wait.h": "c",
-    "argument_util.h": "c"
+    "argument_util.h": "c",
+    "new": "c",
+    "typeinfo": "c"
   }
 }
