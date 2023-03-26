@@ -176,6 +176,7 @@ void _assign_redirection(redirection_node **linked_list, char *found_symbol, cha
 
     **target = calloc(strlen(*current_command) + 1, sizeof(char)); // allocate the buffer
     strcpy(**target, *current_command);                            // copy the current element
+    trim_whitespace(**target);                                     // trim the whitespace
 
     *target = &(current->filename);  // the next target will be our current filename
     *current_command = found_symbol; // the next element will start after the current one
@@ -211,6 +212,7 @@ shell_command *_parse_shell_command(char *command)
         // copies the last element
         *target = calloc(strlen(start) + 1, sizeof(char)); // allocate the buffer
         strcpy(*target, start);                            // copy the current element
+        trim_whitespace(*target);                          // trim the whitespace
     }
 
     return current_command;
