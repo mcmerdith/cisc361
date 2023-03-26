@@ -154,6 +154,7 @@ int main(int argc, char **argv, char **envp)
     for (shell_command **command = &commands[0]; *command != NULL; ++command)
     {
       process_command(*command, envp);
+      free_command(*command);
     }
   }
 
