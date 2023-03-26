@@ -148,12 +148,13 @@ int main(int argc, char **argv, char **envp)
       buffer[strlen(buffer) - 1] = 0; // replace newline with null
 
     shell_command *commands[MAXARGS]; // an array of commands
-    if (parse_commands(buffer, commands, MAXARGS) < 0)
-      continue;
+    int exec_ok = 0 < parse_commands(buffer, commands, MAXARGS);
 
+    // we still need to iterate all the commands to free them even if they aren't executable since they're malloc'dd
     for (shell_command **command = &commands[0]; *command != NULL; ++command)
     {
-      process_command(*command, envp);
+      if (exec_ok)
+        process_command(*command, envp);
       free_command(*command);
     }
   }
