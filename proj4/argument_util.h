@@ -1,6 +1,6 @@
 #pragma once
 
-#include "sh.h"
+#include "ipc.h"
 
 // expand wildcards in arguments into out_execargs.
 // returns a pointer to a NULL terminated array with at most MAX_ARGS elements including the NULL-terminator
@@ -25,6 +25,3 @@ int array_len(void *array[], int max_len);
 // descriptors for piping, redirecting, etc.
 // caller is responsible for freeing all OUT_COMMANDS
 int parse_commands(char *buffer, shell_command *out_commands[], int max_commands);
-
-// free's all related resources for COMMAND
-void free_command(shell_command *command);
