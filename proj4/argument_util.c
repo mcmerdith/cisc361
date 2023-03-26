@@ -3,7 +3,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <glob.h>
+#include <ctype.h>
 #include "argument_util.h"
+#include "defines.h"
 #include "search_path.h"
 
 int expand_n_wildcards(char *arguments[], char *execargs[], int max_args)
@@ -67,14 +69,14 @@ int expand_n_wildcards(char *arguments[], char *execargs[], int max_args)
     return 1;
 }
 
-void str_split_n(char *buffer, char *delimiter, char *arguments[], int max_args)
+void str_split_n(char *buffer, char *delimiter, char *out_segments[], int max_args)
 {
     int i;
     char *saveptr;
-    arguments[0] = strtok_r(buffer, delimiter, &saveptr);
-    for (i = 1; (arguments[i] = strtok_r(NULL, delimiter, &saveptr)) != NULL && i < max_args - 1; ++i)
+    out_segments[0] = strtok_r(buffer, delimiter, &saveptr);
+    for (i = 1; (out_segments[i] = strtok_r(NULL, delimiter, &saveptr)) != NULL && i < max_args - 1; ++i)
         ;
-    arguments[i] = NULL; // make sure that last element is null
+    out_segments[i] = NULL; // make sure that last element is null
 }
 
 char *join_array(char *array[], char *delimiter)
@@ -96,4 +98,140 @@ char *join_array(char *array[], char *delimiter)
     }
 
     return joined_string;
+}
+
+void trim_whitespace(char *input)
+{
+    int start, end;
+
+    for (int i = 0; i < strlen(input) + 1; ++i) // check every character including null terminator
+    {
+        if (input[i] == 0) // end of string
+        {
+            input = 0;
+            return;
+        }
+
+        if (!isspace(input[i]))
+        { // beginning of non-whitespace
+            start = i;
+            break;
+        }
+    }
+
+    for (int i = strlen(input) - 1; i >= 0; --i) // check every character except null terminator in reverse
+    {
+        if (!isspace(input[i]))
+        { // end of non-whitespace
+            end = i;
+            break;
+        }
+    }
+
+    memmove(input, input + start, end - start + 1); // move the string
+    input[end - start + 1] = 0;                     // null-terminate
+}
+
+int array_len(void *array[], int max_len)
+{
+    int i = 0;
+    for (; array[i] != NULL && i < max_len; ++i)
+        ;
+    return i;
+}
+
+// LINKED_LIST is the redirection chain to attach to, FOUND_SYMBOL is the redirector that was found
+// CURRENT_COMMAND is the current section of the command to parse, and TARGET is where to write the found segment before
+// technically this will allow <&, <<, and <<&, but that can be filtered later
+void _assign_redirection(redirection_node **linked_list, char *found_symbol, char **current_command, char ***target)
+{
+    redirection_node *current = malloc(sizeof(redirection_node));
+    current->next_node = *linked_list; // next is current head
+    *linked_list = current;            // current is new head
+
+    char redir_type = *found_symbol;
+
+    *found_symbol = 0; // swap with a terminator
+    ++found_symbol;    // move to the next character
+
+    if (redir_type == *found_symbol) // if we found a second instance
+    {
+        current->b_append = 1; // >> means out append
+        ++found_symbol;        // skip this character
+    }
+    else
+    {
+        current->b_append = 0; // > means out
+    }
+
+    if ('&' == *found_symbol)
+    {
+        current->b_also_err = 1; // & also does stderr
+        ++found_symbol;          // skip this character
+    }
+    else
+    {
+        current->b_also_err = 0;
+    }
+
+    **target = calloc(strlen(*current_command) + 1, sizeof(char)); // allocate the buffer
+    strcpy(**target, *current_command);                            // copy the current element
+
+    *target = &(current->filename);  // the next target will be our current filename
+    *current_command = found_symbol; // the next element will start after the current one
+}
+
+shell_command *_parse_shell_command(char *command)
+{
+    shell_command *current_command = malloc(sizeof(shell_command));
+    current_command->b_background = 0;
+    current_command->rdin = NULL;
+    current_command->rdout = NULL;
+
+    char *start = command, *found_redirector = strpbrk(start, "<>");
+
+    if (found_redirector == NULL) // no redirection
+    {
+        current_command->command = calloc(strlen(command) + 1, sizeof(char));
+        strcpy(current_command->command, command);
+    }
+    else // redirection
+    {
+        char **target = &(current_command->command);
+
+        redirection_node **curr_head;
+
+        while (found_redirector != NULL)
+        {
+            curr_head = ('>' == *found_redirector) ? &(current_command->rdout) : &(current_command->rdin);
+            _assign_redirection(curr_head, found_redirector, &start, &target);
+            found_redirector = strpbrk(start, "<>");
+        }
+
+        // copies the last element
+        *target = calloc(strlen(start) + 1, sizeof(char)); // allocate the buffer
+        strcpy(*target, start);                            // copy the current element
+    }
+
+    return current_command;
+}
+
+int parse_commands(char *buffer, shell_command *out_commands[], int max_commands)
+{
+    // Figure out what is happening with the pipes and redirections
+
+    char *expanded[MAXARGS];
+    str_split_n(buffer, "|", expanded, MAXARGS);
+
+    int i = 0;
+    for (char **current_command = &expanded[0]; *current_command != NULL && i < max_commands - 1; ++current_command)
+    { // each piped command (still has whitespace)
+        trim_whitespace(*current_command);
+        out_commands[i] = _parse_shell_command(*current_command);
+        ++i;
+    }
+
+    out_commands[i] = NULL;
+
+    return 1;
 }
