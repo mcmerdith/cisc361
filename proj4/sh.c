@@ -50,13 +50,13 @@ void shutdown()
   free(prompt_prefix);
 }
 
-int process_command(char *cmd, char **envp)
+int process_command(shell_command *command, char **envp)
 {
   char *arguments[MAXARGS]; // an array of tokens
   pid_t pid;                // pid of the executed command
   int status;               // status of the executed command
   // parse command line into tokens (stored in buffer)
-  str_split_n(cmd, " ", arguments, MAXARGS);
+  str_split_n(command->command, " ", arguments, MAXARGS);
 
   // Our first argument should be the program/command. If null, we have nothing to execute
   if (arguments[0] == NULL)
@@ -79,7 +79,7 @@ int process_command(char *cmd, char **envp)
         exit(1); // Skip execution if failure
       printf("Executing [%s]\n", execargs[0]);
       execve(execargs[0], execargs, envp); // if execution succeeds, child process stops here
-      printf("couldn't execute: %s\n", cmd);
+      printf("couldn't execute: %s\n", command->command);
       exit(127);
     }
 
@@ -147,7 +147,15 @@ int main(int argc, char **argv, char **envp)
     if (buffer[strlen(buffer) - 1] == '\n')
       buffer[strlen(buffer) - 1] = 0; // replace newline with null
 
-    process_command(buffer, envp);
+    shell_command *commands[MAXARGS]; // an array of commands
+    if (parse_commands(buffer, commands, MAXARGS) < 0)
+      continue;
+
+    for (shell_command **command = &commands[0]; *command != NULL; ++command)
+    {
+      process_command(*command, envp);
+      free_command(*command);
+    }
   }
 
   shutdown();
