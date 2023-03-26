@@ -7,24 +7,23 @@ BCC=gcc
 #CC=$(BCC)
 CC=$(BCC) -Wall -Wno-unknown-pragmas
 
+.PHONY = dirguard clean
 
-mysh: sh.o shell_builtins.o argument_util.o get_path.o search_path.o
-	$(CC) -g sh.o shell_builtins.o argument_util.o get_path.o search_path.o -o mysh
+SRCS := $(wildcard *.c)
+OBJS := $(SRCS:%.c=%.o)
+BINDIR = out
 
-sh.o: sh.c sh.h shell_builtins.h search_path.h defines.h
-	$(CC) -g -c sh.c
+mysh: $(OBJS)
+	@echo Linking final executable $@
+	@${CC} -g $(OBJS:%=$(BINDIR)/%) -o $@
 
-shell_builtins.o: shell_builtins.c shell_builtins.h search_path.h defines.h
-	$(CC) -g -c shell_builtins.c
-	
-argument_util.o: argument_util.c argument_util.h search_path.h
-	$(CC) -g -c argument_util.c
+dirguard:
+	@mkdir -p $(BINDIR)
 
-get_path.o: get_path.c get_path.h
-	$(CC) -g -c get_path.c
-
-search_path.o: search_path.c search_path.h get_path.h
-	$(CC) -g -c search_path.c
+%.o: %.c %.h defines.h dirguard
+	@echo Compiling $@
+	@${CC} -g -c $< -o $(BINDIR)/$@
 
 clean:
-	rm -rf *.o mysh
+	@echo Removing compiled binaries
+	@rm -rf $(BINDIR)/ mysh
