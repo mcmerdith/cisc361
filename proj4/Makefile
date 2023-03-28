@@ -7,22 +7,20 @@ BCC=gcc
 #CC=$(BCC)
 CC=$(BCC) -Wall -Wno-unknown-pragmas
 
-.PHONY = dirguard clean
+.PHONY = clean
 
 SRCS := $(wildcard *.c)
-OBJS := $(SRCS:%.c=%.o)
 BINDIR = out
+OBJS := $(SRCS:%.c=$(BINDIR)/%.o)
 
 mysh: $(OBJS)
 	@echo Linking final executable $@
-	@${CC} -g $(OBJS:%=$(BINDIR)/%) -o $@
+	@${CC} -g $(OBJS) -o $@
 
-dirguard:
+${BINDIR}/%.o: %.c %.h defines.h
 	@mkdir -p $(BINDIR)
-
-%.o: %.c %.h defines.h dirguard
 	@echo Compiling $@
-	@${CC} -g -c $< -o $(BINDIR)/$@
+	@${CC} -g -c $< -o $@
 
 clean:
 	@echo Removing compiled binaries
