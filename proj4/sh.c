@@ -71,41 +71,40 @@ void _stdout_redirection_worker(redirection_node *head, int read_fd)
     struct cached_file *next;
   } *head_file = malloc(sizeof(struct cached_file));
 
-  struct cached_file **curr_file = &head_file;
+  struct cached_file *curr_file = head_file;
 
-  while (curr != NULL) // open all files
+  for (curr = head; curr != NULL; curr = curr->next_node) // open all files
   {
     if (access(curr->filename, W_OK) < 0)
     { // no file
-      (*curr_file)->fd = creat(curr->filename, S_IRWXU | S_IRGRP | S_IROTH);
+      curr_file->fd = creat(curr->filename, S_IRWXU | S_IRGRP | S_IROTH);
     }
     else
     { // yay, file
       // todo: noclobber
-      (*curr_file)->fd = open(curr->filename, O_WRONLY);
+      curr_file->fd = open(curr->filename, O_WRONLY);
     }
 
-    if ((*curr_file)->fd < 0)
+    if (curr_file->fd < 0)
     {
       perror("error writing file"); // oops
       exit(1);                      // byeybe
     }
 
-    (*curr_file)->next = malloc(sizeof(struct cached_file));
-    curr_file = &(*curr_file)->next;
+    curr_file = curr_file->next = malloc(sizeof(struct cached_file));
   }
 
   char buff[MAXLINE];
   int readsize;
   while (0 < (readsize = read(read_fd, buff, MAXLINE)))
   {
-    while (*curr_file != NULL)
-    {
-      write((*curr_file)->fd, buff, readsize);
-      if ((curr_file = &(*curr_file)->next) == NULL) // next
-        curr_file = &head_file;                      // or repeat if no more
-    }
+    for (curr_file = head_file; curr_file != NULL; curr_file = curr_file->next)
+      write(curr_file->fd, buff, readsize);
   }
+
+  curr_file = head_file;
+  for (curr_file = head_file; curr_file != NULL; curr_file = curr_file->next)
+    close(curr_file->fd);
 
   exit(0); // we done
 }
