@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <signal.h>
+#include <fcntl.h>
 #include "sh.h"
 #include "defines.h"
 #include "shell_builtins.h"
@@ -50,6 +51,65 @@ void shutdown()
   free(prompt_prefix);
 }
 
+void _pipe_data(int fdout, int fdin)
+{
+  char databuff[MAXLINE];
+  int size;
+
+  while (0 < (size = read(fdin, databuff, MAXLINE)))
+  {
+    write(fdout, databuff, size);
+  }
+}
+
+void _stdout_redirection_worker(redirection_node *head, int read_fd)
+{
+  redirection_node *curr = head;
+  struct cached_file
+  {
+    int fd;
+    struct cached_file *next;
+  } *head_file = malloc(sizeof(struct cached_file));
+
+  struct cached_file **curr_file = &head_file;
+
+  while (curr != NULL) // open all files
+  {
+    if (access(curr->filename, W_OK) < 0)
+    { // no file
+      (*curr_file)->fd = creat(curr->filename, S_IRWXU | S_IRGRP | S_IROTH);
+    }
+    else
+    { // yay, file
+      // todo: noclobber
+      (*curr_file)->fd = open(curr->filename, O_WRONLY);
+    }
+
+    if ((*curr_file)->fd < 0)
+    {
+      perror("error writing file"); // oops
+      exit(1);                      // byeybe
+    }
+
+    (*curr_file)->next = malloc(sizeof(struct cached_file));
+    curr_file = &(*curr_file)->next;
+  }
+
+  char buff[MAXLINE];
+  int readsize;
+  while (0 < (readsize = read(read_fd, buff, MAXLINE)))
+  {
+    while (*curr_file != NULL)
+    {
+      write((*curr_file)->fd, buff, readsize);
+      if ((curr_file = &(*curr_file)->next) == NULL) // next
+        curr_file = &head_file;                      // or repeat if no more
+    }
+  }
+
+  exit(0); // we done
+}
+
 int process_command(shell_command *command, char **envp)
 {
   char *arguments[MAXARGS]; // an array of tokens
@@ -78,6 +138,42 @@ int process_command(shell_command *command, char **envp)
       if (!expand_n_wildcards(arguments, execargs, MAXARGS))
         exit(1); // Skip execution if failure
       printf("Executing [%s]\n", execargs[0]);
+
+      // Handle piping
+
+      redirection_node *curr = command->rdin;
+      int file, pipefd[2];                  // prepare to pipe
+      pipe(pipefd);                         // pipe time
+      dup2(pipefd[READ_END], STDIN_FILENO); // let there be pipe
+      close(pipefd[READ_END]);              // close the pipe
+
+      while (NULL != curr)
+      {
+        if (0 > (file = open(curr->filename, O_RDONLY))) // try to read the file
+        {
+          perror("error reading file"); // oops
+          exit(1);                      // byebye
+        }
+        _pipe_data(pipefd[WRITE_END], file); // pipe it
+        close(file);                         // we done
+        curr = curr->next_node;              // proceed
+      }
+
+      close(pipefd[WRITE_END]);
+
+      if (NULL != command->rdout)
+      {
+        pipe(pipefd);
+
+        if (fork() == 0)
+        { // file writer child
+          _stdout_redirection_worker(command->rdout, pipefd[READ_END]);
+        }
+
+        dup2(pipefd[WRITE_END], STDOUT_FILENO); // Redirect STDOUT to the input of the pipe
+        close(pipefd[WRITE_END]);               // close the old file handle
+      }
+
       execve(execargs[0], execargs, envp); // if execution succeeds, child process stops here
       printf("couldn't execute: %s\n", command->command);
       exit(127);
