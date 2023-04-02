@@ -34,8 +34,10 @@ int redirect_input(redirection_node *head, int write_fd)
     {
         if (0 > (file = open(curr->filename, O_RDONLY))) // try to read the file
         {
-            perror("error reading file"); // oops
-            return 0;                     // byebye
+            char message[MAXLINE];                                            // some space for the message
+            snprintf(message, MAXLINE, "error reading '%s'", curr->filename); // make the message
+            perror(message);                                                  // oops
+            return 0;                                                         // byebye
         }
 
         while (0 < (size = read(file, databuff, MAXLINE)))
