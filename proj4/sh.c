@@ -51,64 +51,6 @@ void shutdown()
   free(prompt_prefix);
 }
 
-void _pipe_data(int fdout, int fdin)
-{
-  char databuff[MAXLINE];
-  int size;
-
-  while (0 < (size = read(fdin, databuff, MAXLINE)))
-  {
-    write(fdout, databuff, size);
-  }
-}
-
-void _stdout_redirection_worker(redirection_node *head, int read_fd)
-{
-  redirection_node *curr = head;
-  struct cached_file
-  {
-    int fd;
-    struct cached_file *next;
-  } *head_file = malloc(sizeof(struct cached_file));
-
-  struct cached_file *curr_file = head_file;
-
-  for (curr = head; curr != NULL; curr = curr->next_node) // open all files
-  {
-    if (access(curr->filename, W_OK) < 0)
-    { // no file
-      curr_file->fd = creat(curr->filename, S_IRWXU | S_IRGRP | S_IROTH);
-    }
-    else
-    { // yay, file
-      // todo: noclobber
-      curr_file->fd = open(curr->filename, O_WRONLY);
-    }
-
-    if (curr_file->fd < 0)
-    {
-      perror("error writing file"); // oops
-      exit(1);                      // byeybe
-    }
-
-    curr_file = curr_file->next = malloc(sizeof(struct cached_file));
-  }
-
-  char buff[MAXLINE];
-  int readsize;
-  while (0 < (readsize = read(read_fd, buff, MAXLINE)))
-  {
-    for (curr_file = head_file; curr_file != NULL; curr_file = curr_file->next)
-      write(curr_file->fd, buff, readsize);
-  }
-
-  curr_file = head_file;
-  for (curr_file = head_file; curr_file != NULL; curr_file = curr_file->next)
-    close(curr_file->fd);
-
-  exit(0); // we done
-}
-
 int process_command(shell_command *command, char **envp)
 {
   char *arguments[MAXARGS]; // an array of tokens
@@ -140,34 +82,29 @@ int process_command(shell_command *command, char **envp)
 
       // Handle piping
 
-      redirection_node *curr = command->rdin;
-      int file, pipefd[2];                  // prepare to pipe
-      pipe(pipefd);                         // pipe time
-      dup2(pipefd[READ_END], STDIN_FILENO); // let there be pipe
-      close(pipefd[READ_END]);              // close the pipe
+      int pipefd[2];
 
-      while (NULL != curr)
+      if (NULL != command->rdin) // input redirection
       {
-        if (0 > (file = open(curr->filename, O_RDONLY))) // try to read the file
-        {
-          perror("error reading file"); // oops
-          exit(1);                      // byebye
-        }
-        _pipe_data(pipefd[WRITE_END], file); // pipe it
-        close(file);                         // we done
-        curr = curr->next_node;              // proceed
+        pipe(pipefd);                                          // create a pipe
+        dup2(pipefd[READ_END], STDIN_FILENO);                  // replace stdin with the read end
+        close(pipefd[READ_END]);                               // close the old reference
+        if (!redirect_input(command->rdin, pipefd[WRITE_END])) // feed the pipe
+          exit(1);                                             // error go brr
+        close(pipefd[WRITE_END]);                              // close the pipe
       }
-
-      close(pipefd[WRITE_END]);
 
       if (NULL != command->rdout)
       {
-        pipe(pipefd);
+        pipe(pipefd); // create a pipe
 
-        if (fork() == 0)
-        { // file writer child
-          _stdout_redirection_worker(command->rdout, pipefd[READ_END]);
+        if (fork() == 0) // file writer child
+        {
+          redirect_output_worker(command->rdout, pipefd[READ_END]); // continuously write stdout to the files
+          exit(0);                                                  // exit when we're done
         }
+
+        // parent must set up the pipe
 
         dup2(pipefd[WRITE_END], STDOUT_FILENO); // Redirect STDOUT to the input of the pipe
         close(pipefd[WRITE_END]);               // close the old file handle
