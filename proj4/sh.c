@@ -86,12 +86,12 @@ int process_command(shell_command *command, char **envp)
 
       if (NULL != command->rdin) // input redirection
       {
-        pipe(pipefd);                                          // create a pipe
-        dup2(pipefd[READ_END], STDIN_FILENO);                  // replace stdin with the read end
-        close(pipefd[READ_END]);                               // close the old reference
-        if (!redirect_input(command->rdin, pipefd[WRITE_END])) // feed the pipe
-          exit(1);                                             // error go brr
-        close(pipefd[WRITE_END]);                              // close the pipe
+        pipe(pipefd);                                     // create a pipe
+        dup2(pipefd[READ_END], STDIN_FILENO);             // replace stdin with the read end
+        close(pipefd[READ_END]);                          // close the old reference
+        if (!redirect_input(command->rdin, STDIN_FILENO)) // feed the pipe
+          exit(1);                                        // error go brr
+        close(pipefd[WRITE_END]);                         // close the pipe
       }
 
       if (NULL != command->rdout)
@@ -100,12 +100,14 @@ int process_command(shell_command *command, char **envp)
 
         if (fork() == 0) // file writer child
         {
+          close(pipefd[WRITE_END]);                                 // Child worker will not use the write end
           redirect_output_worker(command->rdout, pipefd[READ_END]); // continuously write stdout to the files
           exit(0);                                                  // exit when we're done
         }
 
         // parent must set up the pipe
 
+        close(pipefd[READ_END]);                // parent process will not use the read end
         dup2(pipefd[WRITE_END], STDOUT_FILENO); // Redirect STDOUT to the input of the pipe
         close(pipefd[WRITE_END]);               // close the old file handle
       }
