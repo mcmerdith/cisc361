@@ -52,6 +52,27 @@ void shutdown()
   free(prompt_prefix);
 }
 
+void cleanup_redirection(shell_command *command, int oldstdout, int oldstderr, int oldstdin)
+{
+  // Put the old descriptors back
+
+  if (oldstdout != -1)
+    dup2(oldstdout, STDOUT_FILENO);
+  if (oldstderr != -1)
+    dup2(oldstderr, STDERR_FILENO);
+  if (oldstdin != -1)
+    dup2(oldstdin, STDIN_FILENO);
+
+  // The first node of each redirection list may be an already open pipe for IPC
+  // If not closed by the parent the child will hang infinitely
+
+  if (command->rdin && command->rdin->fd >= 0) // close the pipe or things get screwed up
+    close(command->rdin->fd);
+
+  if (command->rdout && command->rdout->fd >= 0) // close the pipe or things get screwed up
+    close(command->rdout->fd);
+}
+
 int process_command(shell_command *command, char **envp)
 {
   char *arguments[MAXARGS];  // an array of tokens
@@ -64,32 +85,53 @@ int process_command(shell_command *command, char **envp)
   if (arguments[0] == NULL)
     return 0;
 
+  int pipefd[2], pipefderr[2], inpipefd[2];
+  int oldstdout = -1, oldstderr = -1, oldstdin = -1;
+
+  if (NULL != command->rdout)
+  {
+    pipe(pipefd);    // create a pipe
+    pipe(pipefderr); // create an error pipe
+
+    if ((writerpid = fork()) == 0) // file writer child
+    {
+      close(pipefd[WRITE_END]);                                                                          // Child worker will not use the write end
+      close(pipefderr[WRITE_END]);                                                                       // Child worker will not use the write end
+      redirect_output_worker(command->rdout, pipefd[READ_END], pipefderr[READ_END], dup(STDERR_FILENO)); // continuously write stdout to the files
+      exit(0);                                                                                           // exit when we're done
+    }
+
+    // parent must set up the pipe
+
+    close(pipefd[READ_END]);                   // parent process will not use the read end
+    close(pipefderr[READ_END]);                // parent process will not use the read end
+    oldstdout = dup(STDOUT_FILENO);            // dup old STDOUT
+    oldstderr = dup(STDERR_FILENO);            // dup old STDERR
+    dup2(pipefd[WRITE_END], STDOUT_FILENO);    // Redirect STDOUT to the input of the pipe
+    dup2(pipefderr[WRITE_END], STDERR_FILENO); // Redirect STDERR to the input of the pipe
+    close(pipefd[WRITE_END]);                  // close the old file handle
+    close(pipefderr[WRITE_END]);               // close the old file handle
+  }
+
+  if (NULL != command->rdin) // input redirection
+  {
+    pipe(inpipefd);                                          // create a pipe
+    oldstdin = dup(STDIN_FILENO);                            // dup old STDIN
+    dup2(inpipefd[READ_END], STDIN_FILENO);                  // replace stdin with the read end
+    close(inpipefd[READ_END]);                               // close the old reference
+    if (!redirect_input(command->rdin, inpipefd[WRITE_END])) // feed the pipe
+      exit(1);                                               // error go brr
+    close(inpipefd[WRITE_END]);                              // close the pipe
+  }
+
   if (try_exec_builtin(arguments))
   {
-    return 1;
+    cleanup_redirection(command, oldstdout, oldstderr, oldstdin);
+    if (writerpid != -1)                    // only wait if the filewriter actually ran
+      waitpid(writerpid, &writerstatus, 0); // we don't really care if this works or not but if possible we want to wait for the file worker to exit
   }
   else
   { // external commands
-    int pipefd[2], pipefderr[2];
-    if (NULL != command->rdout)
-    {
-      pipe(pipefd);    // create a pipe
-      pipe(pipefderr); // create an error pipe
-
-      if ((writerpid = fork()) == 0) // file writer child
-      {
-        close(pipefd[WRITE_END]);                                                                          // Child worker will not use the write end
-        close(pipefderr[WRITE_END]);                                                                       // Child worker will not use the write end
-        redirect_output_worker(command->rdout, pipefd[READ_END], pipefderr[READ_END], dup(STDERR_FILENO)); // continuously write stdout to the files
-        exit(0);                                                                                           // exit when we're done
-      }
-
-      // parent must set up the pipe
-
-      close(pipefd[READ_END]);    // parent process will not use the read end
-      close(pipefderr[READ_END]); // parent process will not use the read end
-    }
-
     if ((pid = fork()) < 0)
     {
       printf("Failed to execute: fork error\n");
@@ -101,26 +143,6 @@ int process_command(shell_command *command, char **envp)
         exit(1); // Skip execution if failure
       printf("Executing [%s]\n", execargs[0]);
 
-      // Handle piping
-
-      if (NULL != command->rdout)
-      {
-        dup2(pipefd[WRITE_END], STDOUT_FILENO);    // Redirect STDOUT to the input of the pipe
-        dup2(pipefderr[WRITE_END], STDERR_FILENO); // Redirect STDERR to the input of the pipe
-        close(pipefd[WRITE_END]);                  // close the old file handle
-        close(pipefderr[WRITE_END]);               // close the old file handle
-      }
-
-      if (NULL != command->rdin) // input redirection
-      {
-        pipe(pipefd);                                          // create a pipe
-        dup2(pipefd[READ_END], STDIN_FILENO);                  // replace stdin with the read end
-        close(pipefd[READ_END]);                               // close the old reference
-        if (!redirect_input(command->rdin, pipefd[WRITE_END])) // feed the pipe
-          exit(1);                                             // error go brr
-        close(pipefd[WRITE_END]);                              // close the pipe
-      }
-
       execve(execargs[0], execargs, envp); // if execution succeeds, child process stops here
       printf("couldn't execute: %s\n", command->command);
       exit(127);
@@ -128,20 +150,7 @@ int process_command(shell_command *command, char **envp)
 
     // parent
 
-    if (NULL != command->rdout) // file redirection worker will hang if we don't close the pipes
-    {
-      close(pipefd[WRITE_END]);    // close the old file handle
-      close(pipefderr[WRITE_END]); // close the old file handle
-    }
-
-    // The first node of each redirection list may be an already open pipe for IPC
-    // If not closed by the parent the child will hang infinitely
-
-    if (command->rdin && command->rdin->fd >= 0) // close the pipe or things get screwed up
-      close(command->rdin->fd);
-
-    if (command->rdout && command->rdout->fd >= 0) // close the pipe or things get screwed up
-      close(command->rdout->fd);
+    cleanup_redirection(command, oldstdout, oldstderr, oldstdin);
 
     if ((pid = waitpid(pid, &status, 0)) < 0)
       printf("waitpid error\n");
@@ -155,9 +164,9 @@ int process_command(shell_command *command, char **envp)
       if (exitcode != 0)
         printf("process terminated with code %d\n", exitcode);
     }
-
-    return 1;
   }
+
+  return 1;
 }
 
 int main(int argc, char **argv, char **envp)
