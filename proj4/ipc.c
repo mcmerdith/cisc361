@@ -61,6 +61,8 @@ void _close_open_files(redirection_node *head_file)
 {
     for (redirection_node *curr_file = head_file; curr_file != NULL;)
     {
+        if (curr_file->fd < 0) // file was never opened
+            continue;
         close(curr_file->fd);
         // temp = curr_file;
         curr_file = curr_file->next_node;
@@ -70,36 +72,32 @@ void _close_open_files(redirection_node *head_file)
 
 int redirect_output_worker(redirection_node *head, int read_fd)
 {
-    redirection_node **curr_file = &head;
-
     /* Open all the files */
-
-    for (redirection_node *curr = head; curr != NULL; curr = curr->next_node)
+    redirection_node *curr;
+    for (curr = head; curr != NULL; curr = curr->next_node)
     {
-        if ((*curr_file)->fd < 0)
+        if (curr->fd < 0)
         {
             if (access(curr->filename, W_OK) < 0)
             { // no file
-                (*curr_file)->fd = creat(curr->filename, S_IRWXU | S_IRGRP | S_IROTH);
+                curr->fd = creat(curr->filename, S_IRWXU | S_IRGRP | S_IROTH);
             }
             else
             { // yay, file
                 // todo: noclobber
-                (*curr_file)->fd = open(curr->filename, O_WRONLY);
+                curr->fd = open(curr->filename, O_WRONLY);
             }
 
-            if ((*curr_file)->fd < 0)
+            if (curr->fd < 0)
             {
                 perror("error writing file"); // oops
                 _close_open_files(head);      // release resources
                 return 0;                     // byeybe
             }
         }
-
-        curr_file = &(*curr_file)->next_node;
     }
 
-    *curr_file = NULL; // put *something* in the last spot
+    curr = NULL; // put *something* in the last spot
 
     /* Read sections from the input into all the files until its closed */
 
@@ -107,8 +105,8 @@ int redirect_output_worker(redirection_node *head, int read_fd)
     int readsize;
     while (0 < (readsize = read(read_fd, buff, MAXLINE)))
     {
-        for (curr_file = &head; *curr_file != NULL; curr_file = &(*curr_file)->next_node)
-            write((*curr_file)->fd, buff, readsize);
+        for (curr = head; curr != NULL; curr = curr->next_node)
+            write(curr->fd, buff, readsize);
     }
 
     _close_open_files(head);
