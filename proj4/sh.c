@@ -86,12 +86,12 @@ int process_command(shell_command *command, char **envp)
 
       if (NULL != command->rdin) // input redirection
       {
-        pipe(pipefd);                                     // create a pipe
-        dup2(pipefd[READ_END], STDIN_FILENO);             // replace stdin with the read end
-        close(pipefd[READ_END]);                          // close the old reference
-        if (!redirect_input(command->rdin, STDIN_FILENO)) // feed the pipe
-          exit(1);                                        // error go brr
-        close(pipefd[WRITE_END]);                         // close the pipe
+        pipe(pipefd);                                          // create a pipe
+        dup2(pipefd[READ_END], STDIN_FILENO);                  // replace stdin with the read end
+        close(pipefd[READ_END]);                               // close the old reference
+        if (!redirect_input(command->rdin, pipefd[WRITE_END])) // feed the pipe
+          exit(1);                                             // error go brr
+        close(pipefd[WRITE_END]);                              // close the pipe
       }
 
       if (NULL != command->rdout)
@@ -116,6 +116,12 @@ int process_command(shell_command *command, char **envp)
       printf("couldn't execute: %s\n", command->command);
       exit(127);
     }
+
+    if (command->rdin && command->rdin->fd >= 0) // close the pipe or things get screwed up
+      close(command->rdin->fd);
+
+    if (command->rdout && command->rdout->fd >= 0) // close the pipe or things get screwed up
+      close(command->rdout->fd);
 
     // parent
     if ((pid = waitpid(pid, &status, 0)) < 0)
@@ -181,16 +187,15 @@ int main(int argc, char **argv, char **envp)
     if (buffer[strlen(buffer) - 1] == '\n')
       buffer[strlen(buffer) - 1] = 0; // replace newline with null
 
-    shell_command *commands[MAXARGS]; // an array of commands
-    int exec_ok = 0 < parse_commands(buffer, commands, MAXARGS);
+    shell_command *first_cmd = parse_commands(buffer);
 
     // we still need to iterate all the commands to free them even if they aren't executable since they're malloc'dd
-    for (shell_command **command = &commands[0]; *command != NULL; ++command)
+    for (shell_command *command = first_cmd; command != NULL; command = command->next_node)
     {
-      if (exec_ok)
-        process_command(*command, envp);
-      free_command(*command);
+      process_command(command, envp);
     }
+
+    free_commands(first_cmd);
   }
 
   shutdown();

@@ -146,6 +146,7 @@ int array_len(void *array[], int max_len)
 void _assign_redirection(redirection_node **linked_list, char *found_symbol, char **current_command, char ***target)
 {
     redirection_node *current = malloc(sizeof(redirection_node));
+    current->fd = -1;
     current->next_node = *linked_list; // next is current head
     *linked_list = current;            // current is new head
 
@@ -218,22 +219,64 @@ shell_command *_parse_shell_command(char *command)
     return current_command;
 }
 
-int parse_commands(char *buffer, shell_command *out_commands[], int max_commands)
+void _link_pipes(shell_command *head)
+{
+    redirection_node *in, *out;
+    int pipefd[2];
+
+    for (shell_command *curr = head; curr != NULL; curr = curr->next_node)
+    {
+        if (curr->next_node)
+        {
+            // in = curr->next_node->rdin;
+            // out = curr->rdout;
+
+            in = malloc(sizeof(redirection_node));
+            out = malloc(sizeof(redirection_node));
+
+            pipe(pipefd);
+
+            in->filename = out->filename = NULL;
+            in->b_append = out->b_append = 0;
+            if ('&' == *curr->command)
+            {
+                ++curr->command;                      // get rid of the &
+                in->b_also_err = out->b_also_err = 1; // set the flag
+            }
+            else
+            {
+                in->b_also_err = out->b_also_err = 0;
+            }
+            in->fd = pipefd[READ_END];
+            out->fd = pipefd[WRITE_END];
+
+            // stitch the elements into their respective lists
+            out->next_node = curr->rdout;
+            curr->rdout = out;
+            in->next_node = curr->next_node->rdin;
+            curr->next_node->rdin = in;
+        }
+    }
+}
+
+shell_command *parse_commands(char *buffer)
 {
     // Figure out what is happening with the pipes and redirections
 
     char *expanded[MAXARGS];
     str_split_n(buffer, "|", expanded, MAXARGS);
 
-    int i = 0;
-    for (char **current_command = &expanded[0]; *current_command != NULL && i < max_commands - 1; ++current_command)
+    shell_command *head, **curr = &head;
+    for (int i = 0; expanded[i] != NULL; ++i)
     { // each piped command (still has whitespace)
-        trim_whitespace(*current_command);
-        out_commands[i] = _parse_shell_command(*current_command);
-        ++i;
+        trim_whitespace(expanded[i]);
+        *curr = _parse_shell_command(expanded[i]);
+        curr = &(*curr)->next_node;
     }
 
-    out_commands[i] = NULL;
+    *curr = NULL; // put something in the last spot
 
-    return 1;
+    _link_pipes(head);
+
+    return head;
 }

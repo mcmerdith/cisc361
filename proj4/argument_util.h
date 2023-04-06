@@ -21,7 +21,7 @@ void trim_whitespace(char *input);
 // get the length of a NULL-terminated array
 int array_len(void *array[], int max_len);
 
-// process a character buffer into a list of shell commands with associated file
+// process a character buffer into a linked-list of shell commands with associated file
 // descriptors for piping, redirecting, etc.
-// caller is responsible for freeing all OUT_COMMANDS
-int parse_commands(char *buffer, shell_command *out_commands[], int max_commands);
+// caller is responsible for freeing all commands
+shell_command *parse_commands(char *buffer);
