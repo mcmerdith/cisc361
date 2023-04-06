@@ -117,6 +117,9 @@ int process_command(shell_command *command, char **envp)
       exit(127);
     }
 
+    // The first node of each redirection list may be an already open pipe for IPC
+    // If not closed by the parent the child will hang infinitely
+
     if (command->rdin && command->rdin->fd >= 0) // close the pipe or things get screwed up
       close(command->rdin->fd);
 
