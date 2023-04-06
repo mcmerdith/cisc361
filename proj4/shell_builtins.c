@@ -13,6 +13,7 @@
 struct shell_builtin *builtins[BUILTINCOUNT];
 
 extern char *prompt_prefix, **environ;
+extern int b_noclobber;
 extern pid_t shell_pid;
 char *previous_dir;
 
@@ -333,6 +334,12 @@ void _setenv_cmd(char *arguments[])
     }
 }
 
+void _noclobber(char *arguments[])
+{
+    b_noclobber = !b_noclobber;
+    printf("noclobber: %d\n", b_noclobber);
+}
+
 #pragma endregion
 
 #pragma region Initialization
@@ -360,7 +367,8 @@ void setup_builtins()
                                                new_builtin("kill", &_kill_cmd),
                                                new_builtin("prompt", &_prompt_cmd),
                                                new_builtin("printenv", &_printenv_cmd),
-                                               new_builtin("setenv", &_setenv_cmd)};
+                                               new_builtin("setenv", &_setenv_cmd),
+                                               new_builtin("noclobber", &_noclobber)};
 
     for (int i = 0; i < BUILTINCOUNT; ++i)
         builtins[i] = tmp[i];

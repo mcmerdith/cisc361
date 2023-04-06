@@ -1,6 +1,6 @@
 #pragma once
 
-#define BUILTINCOUNT 11
+#define BUILTINCOUNT 12
 
 #define PrintStatus(command) printf("Executing built-in command [%s]\n", command)
 #define TooFewArgs(command) fprintf(stderr, "%s: Too few arguments.\n", command)

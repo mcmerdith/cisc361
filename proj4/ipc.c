@@ -5,6 +5,8 @@
 #include "ipc.h"
 #include "defines.h"
 
+extern int b_noclobber;
+
 void _free_redirections(redirection_node *head)
 {
     redirection_node *temp, *current = head;
@@ -77,11 +79,20 @@ int redirect_output_worker(redirection_node *head, int read_fd, int read_fd_err,
         {
             if (access(curr->filename, W_OK) < 0)
             { // no file
+                if (b_noclobber && curr->b_append)
+                {
+                    printf("Cannot create '%s' for appending while noclobber is enabled\n", curr->filename); // oops
+                    continue;
+                }
                 curr->fd = creat(curr->filename, S_IRWXU | S_IRGRP | S_IROTH);
             }
             else
             { // yay, file
-                // todo: noclobber
+                if (b_noclobber && !curr->b_append)
+                {
+                    printf("Cannot overwrite '%s' while noclobber is enabled\n", curr->filename); // oops
+                    continue;
+                }
                 curr->fd = open(curr->filename, O_WRONLY | (curr->b_append ? O_APPEND : O_TRUNC));
             }
 
