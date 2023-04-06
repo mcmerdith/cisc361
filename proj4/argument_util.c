@@ -237,11 +237,11 @@ void _link_pipes(shell_command *head)
             in->b_append = out->b_append = 0;
             if ('&' == *curr->next_node->command)
             {
-                char *trimmed = calloc(strlen(curr->next_node->command), sizeof(char)); // new buffer
-                strcpy(trimmed, curr->next_node->command + 1);                          // get ride of the &
-                free(curr->next_node->command);                                         // free the old buffer
-                curr->next_node->command = trimmed;                                     // set the new buffer
-                in->b_also_err = out->b_also_err = 1;                                   // set the flag
+                curr->next_node->command = memmove(curr->next_node->command,
+                                                   curr->next_node->command + 1,
+                                                   strlen(curr->next_node->command)); // remove the &
+                trim_whitespace(curr->next_node->command);                            // trim whitespace
+                in->b_also_err = out->b_also_err = 1;                                 // set the flag
             }
             else
             {
