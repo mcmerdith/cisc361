@@ -228,9 +228,6 @@ void _link_pipes(shell_command *head)
     {
         if (curr->next_node)
         {
-            // in = curr->next_node->rdin;
-            // out = curr->rdout;
-
             in = malloc(sizeof(redirection_node));
             out = malloc(sizeof(redirection_node));
 
@@ -238,10 +235,13 @@ void _link_pipes(shell_command *head)
 
             in->filename = out->filename = NULL;
             in->b_append = out->b_append = 0;
-            if ('&' == *curr->command)
+            if ('&' == *curr->next_node->command)
             {
-                ++curr->command;                      // get rid of the &
-                in->b_also_err = out->b_also_err = 1; // set the flag
+                char *trimmed = calloc(strlen(curr->next_node->command), sizeof(char)); // new buffer
+                strcpy(trimmed, curr->next_node->command + 1);                          // get ride of the &
+                free(curr->next_node->command);                                         // free the old buffer
+                curr->next_node->command = trimmed;                                     // set the new buffer
+                in->b_also_err = out->b_also_err = 1;                                   // set the flag
             }
             else
             {
