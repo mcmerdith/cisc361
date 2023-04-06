@@ -59,18 +59,15 @@ int redirect_input(redirection_node *head, int write_fd)
 
 void _close_open_files(redirection_node *head_file)
 {
-    for (redirection_node *curr_file = head_file; curr_file != NULL;)
+    for (redirection_node *curr_file = head_file; curr_file != NULL; curr_file = curr_file->next_node)
     {
         if (curr_file->fd < 0) // file was never opened
             continue;
         close(curr_file->fd);
-        // temp = curr_file;
-        curr_file = curr_file->next_node;
-        // free(temp);
     }
 }
 
-int redirect_output_worker(redirection_node *head, int read_fd)
+int redirect_output_worker(redirection_node *head, int read_fd, int read_fd_err, int real_stderr)
 {
     /* Open all the files */
     redirection_node *curr;
@@ -85,14 +82,15 @@ int redirect_output_worker(redirection_node *head, int read_fd)
             else
             { // yay, file
                 // todo: noclobber
-                curr->fd = open(curr->filename, O_WRONLY);
+                curr->fd = open(curr->filename, O_WRONLY | (curr->b_append ? O_APPEND : O_TRUNC));
             }
 
             if (curr->fd < 0)
             {
-                perror("error writing file"); // oops
-                _close_open_files(head);      // release resources
-                return 0;                     // byeybe
+                char message[MAXLINE];                                            // some space for the message
+                snprintf(message, MAXLINE, "error writing '%s'", curr->filename); // make the message
+                perror(message);                                                  // oops
+                continue;                                                         // byeybe
             }
         }
     }
@@ -106,7 +104,32 @@ int redirect_output_worker(redirection_node *head, int read_fd)
     while (0 < (readsize = read(read_fd, buff, MAXLINE)))
     {
         for (curr = head; curr != NULL; curr = curr->next_node)
+        {
+            if (curr->fd < 0) // skip broken files
+                continue;
             write(curr->fd, buff, readsize);
+        }
+    }
+
+    while (0 < (readsize = read(read_fd_err, buff, MAXLINE)))
+    {
+        int b_real_out = 1;
+
+        for (curr = head; curr != NULL; curr = curr->next_node)
+        {
+            if (curr->b_also_err)
+            {
+                if (curr->fd < 0) // skip broken files
+                    continue;
+                write(curr->fd, buff, readsize);
+                b_real_out = 0;
+            }
+        }
+
+        if (b_real_out) // only write real output if no file was written
+        {
+            write(real_stderr, buff, readsize);
+        }
     }
 
     _close_open_files(head);
