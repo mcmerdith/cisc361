@@ -71,22 +71,30 @@ void *_thread_job_manager(void *arg)
     }
 }
 
-pthread_t thread_id;
+pthread_t manager_id;
+int b_watchuser_running = 0;
+pthread_t watchuser_id;
 
 void initialize_job_manager()
 {
     run_thread(&_thread_job_manager);
-    pthread_detach(thread_id);
 }
 
 void shutdown_job_manager()
 {
-    pthread_cancel(thread_id);
+    pthread_cancel(manager_id);     // stop the thread
+    pthread_join(manager_id, NULL); // wait for exit
+
+    if (b_watchuser_running) // only stop the watchuser thread if its running
+    {
+        pthread_cancel(watchuser_id);     // stop the thread
+        pthread_join(watchuser_id, NULL); // wait for exit
+    }
 }
 
 void run_thread(void *(*thread_method)(void *))
 {
-    pthread_create(&thread_id, NULL, thread_method, NULL);
+    pthread_create(&manager_id, NULL, thread_method, NULL);
 }
 
 void register_process(int pid)
