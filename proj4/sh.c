@@ -12,6 +12,7 @@
 #include "shell_builtins.h"
 #include "argument_util.h"
 #include "search_path.h"
+#include "bgjob.h"
 
 char *prompt_prefix = NULL;
 int b_noclobber = 0;
@@ -49,6 +50,7 @@ void sig_handler(int sig)
 void shutdown()
 {
   cleanup_builtins();
+  shutdown_job_manager();
   free(prompt_prefix);
 }
 
@@ -195,6 +197,7 @@ int main(int argc, char **argv, char **envp)
 
   // Setup our builtin commands
   setup_builtins();
+  initialize_job_manager();
 
   while (1)
   {
@@ -223,7 +226,32 @@ int main(int argc, char **argv, char **envp)
     // we still need to iterate all the commands to free them even if they aren't executable since they're malloc'dd
     for (shell_command *command = first_cmd; command != NULL; command = command->next_node)
     {
-      process_command(command, envp);
+      if (command->b_background)
+      {
+        if (command->next_node)
+        {
+          fprintf(stderr, "cannot pipe output from a background job");
+          break;
+        }
+
+        int fpid = fork();
+        if (fpid < 0)
+        {
+          fprintf(stderr, "failed to create background job");
+          break;
+        }
+        else if (fpid == 0)
+        {
+          process_command(command, envp);
+          exit(0);
+        }
+        else
+        {
+          register_process(fpid);
+        }
+      }
+      else
+        process_command(command, envp);
     }
 
     free_commands(first_cmd);

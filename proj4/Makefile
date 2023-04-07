@@ -5,7 +5,7 @@ BCC=gcc
 #BCC=x86_64-w64-mingw32-gcc
 
 #CC=$(BCC)
-CC=$(BCC) -Wall -Wno-unknown-pragmas
+CC=$(BCC) -Wall -Wno-unknown-pragmas -pthread
 
 .PHONY = clean
 

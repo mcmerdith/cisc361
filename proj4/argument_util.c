@@ -266,17 +266,28 @@ shell_command *parse_commands(char *buffer)
     char *expanded[MAXARGS];
     str_split_n(buffer, "|", expanded, MAXARGS);
 
-    shell_command *head, **curr = &head;
+    shell_command *head, *curr, **current = &head;
     for (int i = 0; expanded[i] != NULL; ++i)
     { // each piped command (still has whitespace)
         trim_whitespace(expanded[i]);
-        *curr = _parse_shell_command(expanded[i]);
-        curr = &(*curr)->next_node;
+        *current = _parse_shell_command(expanded[i]);
+        current = &(*current)->next_node;
     }
 
-    *curr = NULL; // put something in the last spot
+    *current = NULL; // put something in the last spot
 
     _link_pipes(head);
+
+    for (curr = head; curr != NULL; curr = curr->next_node)
+    {
+        char *final = curr->command + strlen(curr->command) - 1;
+        if ('&' == *final)
+        {
+            curr->b_background = 1;         // set the flag
+            *final = 0;                     // get rid of it
+            trim_whitespace(curr->command); // remove any leftover whitespace
+        }
+    }
 
     return head;
 }
