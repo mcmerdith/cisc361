@@ -101,7 +101,8 @@ void *thread_watchuser(void *arg)
 
                 for (watched_user *current = watchuser_head; current != NULL; current = current->next_node)
                 {
-                    printf("%.*s -> %.*s\n", __UT_NAMESIZE, (*curr)->username, __UT_NAMESIZE, current->username);
+                    if (current->b_logged_on)
+                        continue;
                     if (strncmp((*curr)->username, current->username, __UT_NAMESIZE) != 0)
                         continue;
 
