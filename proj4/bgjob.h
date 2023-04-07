@@ -15,7 +15,7 @@ void initialize_job_manager();
 void shutdown_job_manager();
 
 // Run THREAD_METHOD as a new thread
-void run_thread(void *(*thread_method)(void *));
+void run_thread(pthread_t *thread_id, void *(*thread_method)(void *));
 
 // Register a process to be watched
 void register_process(int pid);

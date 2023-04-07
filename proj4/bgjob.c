@@ -77,7 +77,7 @@ pthread_t watchuser_id;
 
 void initialize_job_manager()
 {
-    run_thread(&_thread_job_manager);
+    run_thread(&manager_id, &_thread_job_manager);
 }
 
 void shutdown_job_manager()
@@ -92,9 +92,9 @@ void shutdown_job_manager()
     }
 }
 
-void run_thread(void *(*thread_method)(void *))
+void run_thread(pthread_t *thread_id, void *(*thread_method)(void *))
 {
-    pthread_create(&manager_id, NULL, thread_method, NULL);
+    pthread_create(thread_id, NULL, thread_method, NULL);
 }
 
 void register_process(int pid)

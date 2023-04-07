@@ -9,6 +9,7 @@
 #include "defines.h"
 #include "argument_util.h"
 #include "search_path.h"
+#include "watchuser.h"
 
 struct shell_builtin *builtins[BUILTINCOUNT];
 
@@ -340,6 +341,24 @@ void _noclobber(char *arguments[])
     printf("noclobber: %d\n", b_noclobber);
 }
 
+void _watchuser(char *arguments[])
+{
+    if (arguments[0] == NULL)
+    {
+        TooFewArgs("watchuser");
+        return;
+    }
+
+    if (arguments[1] != NULL && strcmp(arguments[1], "off"))
+    {
+        stop_watch_user(arguments[0]);
+    }
+    else
+    {
+        watch_user(arguments[0]);
+    }
+}
+
 #pragma endregion
 
 #pragma region Initialization
@@ -368,7 +387,8 @@ void setup_builtins()
                                                new_builtin("prompt", &_prompt_cmd),
                                                new_builtin("printenv", &_printenv_cmd),
                                                new_builtin("setenv", &_setenv_cmd),
-                                               new_builtin("noclobber", &_noclobber)};
+                                               new_builtin("noclobber", &_noclobber),
+                                               new_builtin("watchuser", &_watchuser)};
 
     for (int i = 0; i < BUILTINCOUNT; ++i)
         builtins[i] = tmp[i];
