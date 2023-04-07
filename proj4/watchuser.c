@@ -94,7 +94,6 @@ void *thread_watchuser(void *arg)
         setutxent();               /* start at beginning */
         while ((up = getutxent())) /* get an entry */
         {
-            printf("%.*s", __UT_NAMESIZE, up->ut_user);
             if (up->ut_type == USER_PROCESS) /* only care about users */
             {
                 *curr = malloc(sizeof(login_user));
@@ -102,7 +101,7 @@ void *thread_watchuser(void *arg)
 
                 for (watched_user *current = watchuser_head; current != NULL; current = current->next_node)
                 {
-                    printf("%.*s -> %.*s", __UT_NAMESIZE, (*curr)->username, __UT_NAMESIZE, current->username);
+                    printf("%.*s -> %.*s\n", __UT_NAMESIZE, (*curr)->username, __UT_NAMESIZE, current->username);
                     if (strncmp((*curr)->username, current->username, __UT_NAMESIZE) != 0)
                         continue;
 
