@@ -53,14 +53,15 @@ void *_thread_job_manager(void *arg)
 
             printf("background job [%d] terminated with code %d\n", (*curr)->pid, WEXITSTATUS(status));
 
-            if ((*curr)->prev_node)
-                (*curr)->prev_node->next_node = (*curr)->next_node; // remove this element from the list
-
-            if ((*curr)->next_node)
-                (*curr)->next_node->prev_node = (*curr)->prev_node;
-
             temp = *curr;
-            *curr = (*curr)->next_node;
+
+            if (temp->prev_node)
+                temp->prev_node->next_node = temp->next_node; // remove this element from the list
+
+            if (temp->next_node)
+                temp->next_node->prev_node = temp->prev_node;
+
+            *curr = temp->next_node;
 
             free(temp);
         }

@@ -349,12 +349,14 @@ void _watchuser(char *arguments[])
         return;
     }
 
-    if (arguments[1] != NULL && strcmp(arguments[1], "off"))
+    if (arguments[1] != NULL && strcmp(arguments[1], "off") == 0)
     {
+        printf("Removed '%s' from the user watchlist\n", arguments[0]);
         stop_watch_user(arguments[0]);
     }
     else
     {
+        printf("Added '%s' to the user watchlist\n", arguments[0]);
         watch_user(arguments[0]);
     }
 }

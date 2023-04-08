@@ -26,6 +26,12 @@ void watch_user(char *username)
     watched_user **current = &watchuser_head;
     while (1)
     {
+        if (*current && strncmp((*current)->username, username, __UT_NAMESIZE) == 0)
+        {
+            printf("User '%.*s' was already on the watchlist\n", __UT_NAMESIZE, username);
+            break;
+        }
+
         if (*current != NULL && (*current)->next_node == NULL) // try and find an element with a next_node
         {
             (*current)->next_node = new_user;
@@ -58,24 +64,26 @@ void stop_watch_user(char *username)
 
     watched_user **current = &watchuser_head, *temp;
 
-    while (1)
+    while (*current != NULL)
     {
         if (*current != NULL && strcmp((*current)->username, username) == 0) // try and find an element with the correct username
         {
-            if ((*current)->prev_node)
-                (*current)->prev_node->next_node = (*current)->next_node; // remove this element from the list
-
-            if ((*current)->next_node)
-                (*current)->next_node->prev_node = (*current)->prev_node;
-
             temp = *current;
-            *current = (*current)->next_node;
 
-            free(temp->username);
+            if (temp->prev_node)
+                temp->prev_node->next_node = temp->next_node; // remove this element from the list
+
+            if (temp->next_node)
+                temp->next_node->prev_node = temp->prev_node;
+
+            *current = temp->next_node;
+
             free(temp);
         }
-
-        current = &(*current)->next_node;
+        else
+        {
+            current = &(*current)->next_node;
+        }
     }
 
     pthread_mutex_unlock(&watchuser_mutex);
