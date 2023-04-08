@@ -59,16 +59,6 @@ int redirect_input(redirection_node *head, int write_fd)
     return 1;
 }
 
-void _close_open_files(redirection_node *head_file)
-{
-    for (redirection_node *curr_file = head_file; curr_file != NULL; curr_file = curr_file->next_node)
-    {
-        if (curr_file->fd < 0) // file was never opened
-            continue;
-        close(curr_file->fd);
-    }
-}
-
 int redirect_output_worker(redirection_node *head, int read_fd, int read_fd_err, int real_stderr)
 {
     /* Open all the files */
@@ -143,7 +133,13 @@ int redirect_output_worker(redirection_node *head, int read_fd, int read_fd_err,
         }
     }
 
-    _close_open_files(head);
+    // close the open files
+    for (redirection_node *curr_file = head; curr_file != NULL; curr_file = curr_file->next_node)
+    {
+        if (curr_file->fd < 0) // file was never opened
+            continue;
+        close(curr_file->fd);
+    }
 
     return 1; // we done
 }

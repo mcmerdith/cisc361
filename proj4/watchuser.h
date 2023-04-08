@@ -22,6 +22,3 @@ void watch_user(char *username);
 
 // remove a username from the watchlist
 void stop_watch_user(char *username);
-
-// the thread that watches users
-void *thread_watchuser(void *arg);

@@ -12,84 +12,7 @@ extern int b_watchuser_running;
 pthread_mutex_t watchuser_mutex;
 watched_user *watchuser_head;
 
-void watch_user(char *username)
-{
-    watched_user *new_user = malloc(sizeof(watched_user));
-    strncpy(new_user->username, username, __UT_NAMESIZE);
-    memset(new_user->tty, 0, __UT_LINESIZE);
-    memset(new_user->host, 0, __UT_HOSTSIZE);
-    new_user->next_node = new_user->prev_node = NULL;
-    new_user->b_logged_on = 0;
-
-    pthread_mutex_lock(&watchuser_mutex);
-
-    watched_user **current = &watchuser_head;
-    while (1)
-    {
-        if (*current && strncmp((*current)->username, username, __UT_NAMESIZE) == 0)
-        {
-            printf("User '%.*s' was already on the watchlist\n", __UT_NAMESIZE, username);
-            break;
-        }
-
-        if (*current != NULL && (*current)->next_node == NULL) // try and find an element with a next_node
-        {
-            (*current)->next_node = new_user;
-            new_user->prev_node = *current;
-            break;
-        }
-        else if (*current == NULL)
-        {
-            *current = new_user;
-            break;
-        }
-
-        current = &(*current)->next_node;
-    }
-
-    pthread_mutex_unlock(&watchuser_mutex);
-
-    // start the thread if its not running
-
-    if (!b_watchuser_running)
-    {
-        run_thread(&watchuser_id, &thread_watchuser);
-        b_watchuser_running = 1;
-    }
-}
-
-void stop_watch_user(char *username)
-{
-    pthread_mutex_lock(&watchuser_mutex);
-
-    watched_user **current = &watchuser_head, *temp;
-
-    while (*current != NULL)
-    {
-        if (*current != NULL && strcmp((*current)->username, username) == 0) // try and find an element with the correct username
-        {
-            temp = *current;
-
-            if (temp->prev_node)
-                temp->prev_node->next_node = temp->next_node; // remove this element from the list
-
-            if (temp->next_node)
-                temp->next_node->prev_node = temp->prev_node;
-
-            *current = temp->next_node;
-
-            free(temp);
-        }
-        else
-        {
-            current = &(*current)->next_node;
-        }
-    }
-
-    pthread_mutex_unlock(&watchuser_mutex);
-}
-
-void *thread_watchuser(void *arg)
+void *_thread_watchuser(void *arg)
 {
     while (1)
     {
@@ -155,4 +78,81 @@ void *thread_watchuser(void *arg)
 
         sleep(5);
     }
+}
+
+void watch_user(char *username)
+{
+    watched_user *new_user = malloc(sizeof(watched_user));
+    strncpy(new_user->username, username, __UT_NAMESIZE);
+    memset(new_user->tty, 0, __UT_LINESIZE);
+    memset(new_user->host, 0, __UT_HOSTSIZE);
+    new_user->next_node = new_user->prev_node = NULL;
+    new_user->b_logged_on = 0;
+
+    pthread_mutex_lock(&watchuser_mutex);
+
+    watched_user **current = &watchuser_head;
+    while (1)
+    {
+        if (*current && strncmp((*current)->username, username, __UT_NAMESIZE) == 0)
+        {
+            printf("User '%.*s' was already on the watchlist\n", __UT_NAMESIZE, username);
+            break;
+        }
+
+        if (*current != NULL && (*current)->next_node == NULL) // try and find an element with a next_node
+        {
+            (*current)->next_node = new_user;
+            new_user->prev_node = *current;
+            break;
+        }
+        else if (*current == NULL)
+        {
+            *current = new_user;
+            break;
+        }
+
+        current = &(*current)->next_node;
+    }
+
+    pthread_mutex_unlock(&watchuser_mutex);
+
+    // start the thread if its not running
+
+    if (!b_watchuser_running)
+    {
+        run_thread(&watchuser_id, &_thread_watchuser);
+        b_watchuser_running = 1;
+    }
+}
+
+void stop_watch_user(char *username)
+{
+    pthread_mutex_lock(&watchuser_mutex);
+
+    watched_user **current = &watchuser_head, *temp;
+
+    while (*current != NULL)
+    {
+        if (*current != NULL && strncmp((*current)->username, username, __UT_NAMESIZE) == 0) // try and find an element with the correct username
+        {
+            temp = *current;
+
+            if (temp->prev_node)
+                temp->prev_node->next_node = temp->next_node; // remove this element from the list
+
+            if (temp->next_node)
+                temp->next_node->prev_node = temp->prev_node; // remove this element from the list
+
+            *current = temp->next_node; // move the pointer
+
+            free(temp);
+        }
+        else
+        {
+            current = &(*current)->next_node; // move the pointer
+        }
+    }
+
+    pthread_mutex_unlock(&watchuser_mutex);
 }

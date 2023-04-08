@@ -5,6 +5,7 @@
 typedef struct job
 {
     int pid;                           // the pid of the process, if applicable
+    char *opt_descriptor;              // an optional descriptor for the process
     struct job *next_node, *prev_node; // linked-list stuff
 } job;
 
@@ -18,4 +19,4 @@ void shutdown_job_manager();
 void run_thread(pthread_t *thread_id, void *(*thread_method)(void *));
 
 // Register a process to be watched
-void register_process(int pid);
+void register_process(int pid, char *opt_descriptor);

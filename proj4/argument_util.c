@@ -196,13 +196,13 @@ shell_command *_parse_shell_command(char *command)
     }
     else
     {
-        current_command->b_background = 0;
+        current_command->b_background = 0; // not a background command
     }
 
-    current_command->rdin = NULL;
-    current_command->rdout = NULL;
+    current_command->rdin = NULL;  // no redireciton by default
+    current_command->rdout = NULL; // no redirection by default
 
-    char *start = command, *found_redirector = strpbrk(start, "<>");
+    char *start = command, *found_redirector = strpbrk(start, "<>"); // check if we have any redirections
 
     if (found_redirector == NULL) // no redirection
     {
@@ -215,11 +215,11 @@ shell_command *_parse_shell_command(char *command)
 
         redirection_node **curr_head;
 
-        while (found_redirector != NULL)
+        while (found_redirector != NULL) // while we have more redirections continually loop
         {
-            curr_head = ('>' == *found_redirector) ? &(current_command->rdout) : &(current_command->rdin);
-            _assign_redirection(curr_head, found_redirector, &start, &target);
-            found_redirector = strpbrk(start, "<>");
+            curr_head = ('>' == *found_redirector) ? &(current_command->rdout) : &(current_command->rdin); // select which list to redirect to
+            _assign_redirection(curr_head, found_redirector, &start, &target);                             // recursively process the redirections
+            found_redirector = strpbrk(start, "<>");                                                       // go again
         }
 
         // copies the last element
@@ -243,11 +243,15 @@ void _link_pipes(shell_command *head)
             in = malloc(sizeof(redirection_node));
             out = malloc(sizeof(redirection_node));
 
-            pipe(pipefd);
+            pipe(pipefd); // create the pipe
 
-            in->filename = out->filename = NULL;
-            in->b_append = out->b_append = 0;
-            if ('&' == *curr->next_node->command)
+            in->filename = out->filename = NULL; // signifies that the filedescriptor is already open
+            in->b_append = out->b_append = 0;    // IPC doesn't append
+
+            in->fd = pipefd[READ_END];   // input process receives the read end
+            out->fd = pipefd[WRITE_END]; // output process receives the write end
+
+            if ('&' == *curr->next_node->command) // STDERR redirection
             {
                 curr->next_node->command = memmove(curr->next_node->command,
                                                    curr->next_node->command + 1,
@@ -257,14 +261,13 @@ void _link_pipes(shell_command *head)
             }
             else
             {
-                in->b_also_err = out->b_also_err = 0;
+                in->b_also_err = out->b_also_err = 0; // no STDERR
             }
-            in->fd = pipefd[READ_END];
-            out->fd = pipefd[WRITE_END];
 
             // stitch the elements into their respective lists
             out->next_node = curr->rdout;
             curr->rdout = out;
+
             in->next_node = curr->next_node->rdin;
             curr->next_node->rdin = in;
         }
@@ -276,19 +279,19 @@ shell_command *parse_commands(char *buffer)
     // Figure out what is happening with the pipes and redirections
 
     char *expanded[MAXARGS];
-    str_split_n(buffer, "|", expanded, MAXARGS);
+    str_split_n(buffer, "|", expanded, MAXARGS); // split the commands at the pipes (leaves behind the & for the parser)
 
     shell_command *head, **current = &head;
     for (int i = 0; expanded[i] != NULL; ++i)
-    { // each piped command (still has whitespace)
-        trim_whitespace(expanded[i]);
-        *current = _parse_shell_command(expanded[i]);
-        current = &(*current)->next_node;
+    {                                                 // each piped command (still has whitespace)
+        trim_whitespace(expanded[i]);                 // remove said whitespace
+        *current = _parse_shell_command(expanded[i]); // parse the command
+        current = &(*current)->next_node;             // move the pointer
     }
 
     *current = NULL; // put something in the last spot
 
-    _link_pipes(head);
+    _link_pipes(head); // link the piped processes together
 
     return head;
 }

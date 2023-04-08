@@ -247,7 +247,7 @@ int main(int argc, char **argv, char **envp)
         }
         else
         {
-          register_process(fpid);
+          register_process(fpid, command);
         }
       }
       else
