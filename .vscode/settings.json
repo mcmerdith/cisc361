@@ -11,6 +11,7 @@
     "wait.h": "c",
     "argument_util.h": "c",
     "new": "c",
-    "typeinfo": "c"
+    "typeinfo": "c",
+    "utmpx.h": "c"
   }
 }
