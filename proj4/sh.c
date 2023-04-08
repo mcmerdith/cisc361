@@ -230,14 +230,14 @@ int main(int argc, char **argv, char **envp)
       {
         if (command->next_node)
         {
-          fprintf(stderr, "cannot pipe output from a background job");
+          fprintf(stderr, "cannot pipe output from a background job\n");
           break;
         }
 
         int fpid = fork();
         if (fpid < 0)
         {
-          fprintf(stderr, "failed to create background job");
+          fprintf(stderr, "failed to create background job\n");
           break;
         }
         else if (fpid == 0)

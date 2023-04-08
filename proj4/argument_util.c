@@ -186,7 +186,19 @@ void _assign_redirection(redirection_node **linked_list, char *found_symbol, cha
 shell_command *_parse_shell_command(char *command)
 {
     shell_command *current_command = malloc(sizeof(shell_command));
-    current_command->b_background = 0;
+
+    char *final = command + strlen(command) - 1;
+    if ('&' == *final)
+    {
+        current_command->b_background = 1; // set the flag
+        *final = 0;                        // get rid of it
+        trim_whitespace(command);          // remove any leftover whitespace
+    }
+    else
+    {
+        current_command->b_background = 0;
+    }
+
     current_command->rdin = NULL;
     current_command->rdout = NULL;
 
@@ -266,7 +278,7 @@ shell_command *parse_commands(char *buffer)
     char *expanded[MAXARGS];
     str_split_n(buffer, "|", expanded, MAXARGS);
 
-    shell_command *head, *curr, **current = &head;
+    shell_command *head, **current = &head;
     for (int i = 0; expanded[i] != NULL; ++i)
     { // each piped command (still has whitespace)
         trim_whitespace(expanded[i]);
@@ -277,17 +289,6 @@ shell_command *parse_commands(char *buffer)
     *current = NULL; // put something in the last spot
 
     _link_pipes(head);
-
-    for (curr = head; curr != NULL; curr = curr->next_node)
-    {
-        char *final = curr->command + strlen(curr->command) - 1;
-        if ('&' == *final)
-        {
-            curr->b_background = 1;         // set the flag
-            *final = 0;                     // get rid of it
-            trim_whitespace(curr->command); // remove any leftover whitespace
-        }
-    }
 
     return head;
 }
