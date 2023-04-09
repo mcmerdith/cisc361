@@ -7,7 +7,7 @@
 #include <string.h>
 #include "bgjob.h"
 
-job *job_head = NULL;
+job *job_head = NULL; // must be locked with JOB_MUTEX
 pthread_mutex_t job_mutex;
 
 void _add_job(job *new_job)
@@ -103,6 +103,63 @@ void shutdown_job_manager()
 void run_thread(pthread_t *thread_id, void *(*thread_method)(void *))
 {
     pthread_create(thread_id, NULL, thread_method, NULL);
+}
+
+void print_jobs()
+{
+    pthread_mutex_lock(&job_mutex);
+
+    int i = 0;
+
+    for (job *curr = job_head; curr != NULL; curr = curr->next_node)
+    {
+        ++i;
+        printf("[%d] (PID %d) %s\n", i, curr->pid, curr->opt_descriptor);
+    }
+
+    pthread_mutex_unlock(&job_mutex);
+}
+
+int release_process(int job_id)
+{
+    pthread_mutex_lock(&job_mutex);
+
+    job **curr = &job_head, *temp;
+    int return_pid = -1, i = 0;
+
+    while (*curr != NULL)
+    {
+        ++i; // increment the job id
+
+        if (i != job_id) // not the job we're looking for
+        {
+            curr = &(*curr)->next_node; // move to the next node
+            continue;
+        }
+
+        // we found the job, remove it from the list and return its pid
+        temp = *curr;
+
+        return_pid = temp->pid;
+
+        if (temp->prev_node)
+            temp->prev_node->next_node = temp->next_node; // remove this element from the list
+
+        if (temp->next_node)
+            temp->next_node->prev_node = temp->prev_node; // remove this element from the list
+
+        *curr = temp->next_node; // move the pointer
+
+        if (temp->opt_descriptor)       // if we have a descriptor
+            free(temp->opt_descriptor); // free the descriptor
+        free(temp);                     // free the job
+
+        break; // we can't return in the loop due to mutex locking
+    }
+
+    pthread_mutex_unlock(&job_mutex);
+
+    return return_pid;
 }
 
 void register_process(int pid, char *opt_descriptor)

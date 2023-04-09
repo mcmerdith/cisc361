@@ -179,7 +179,20 @@ int main(int argc, char **argv, char **envp)
   printf("  / /|_/ /   \\__ \\   / /_/ / \n"); // ascii
   printf(" / /  / /   ___/ /  / __  /  \n");   // art
   printf("/_/  /_/   /____/  /_/ /_/   \n");   // intro
-  printf("\nv1.0\n\n");
+  printf("\nv2.0\n\n");
+
+  printf("Whats new in v2.0:\n");
+  printf("- Interprocess communication\n");
+  printf("\t+ Supports n-pipes parsed recursively\n");
+  printf("\t+ |, |& for stdout, and stdout/stderr respectively\n");
+  printf("- File redirection\n");
+  printf("\t+ Supports n-redirections for input and output parsed recursively\n");
+  printf("\t+ >, >&, >>, >>&, < for stdout, stdout/stderr, stdout append, stdout/stderr append, stdin respectively\n");
+  printf("- Background jobs + Job manager\n");
+  printf("\t+ Supports n-background jobs\n");
+  printf("\t+ List active background jobs with 'jobs' built in command\n");
+  printf("\t+ Selectively bring a background job to the foreground with the 'fg' built in command ('fg' for first job, 'fg [id]' to foreground a specific job)\n");
+  printf("- 'watchuser' built in command tracks log in and log off of all watched users\n\n");
 
   shell_pid = getpid();
 
@@ -247,7 +260,7 @@ int main(int argc, char **argv, char **envp)
         }
         else
         {
-          register_process(fpid, command);
+          register_process(fpid, command->command);
         }
       }
       else

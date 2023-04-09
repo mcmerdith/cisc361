@@ -4,12 +4,14 @@
 #include <string.h>
 #include <signal.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <dirent.h>
 #include "shell_builtins.h"
 #include "defines.h"
 #include "argument_util.h"
 #include "search_path.h"
 #include "watchuser.h"
+#include "bgjob.h"
 
 struct shell_builtin *builtins[BUILTINCOUNT];
 
@@ -64,7 +66,7 @@ void _which_cmd(char *arguments[])
         }
         else
         {
-            printf("%s: Command not found\n", arg);
+            fprintf(stderr, "%s: Command not found\n", arg);
         }
     }
 }
@@ -227,7 +229,7 @@ void _kill_cmd(char *arguments[])
         char *tmp = &(*curr)[1]; // copy the signal without the preceding -
         if (strlen(tmp) == 0)    // no signal
         {
-            printf("kill: invalid signal\n");
+            fprintf(stderr, "kill: invalid signal\n");
             return;
         }
 
@@ -235,7 +237,7 @@ void _kill_cmd(char *arguments[])
 
         if (strlen(err) != 0)
         { // invalid signal
-            printf("kill: invalid signal @ %s\n", err);
+            fprintf(stderr, "kill: invalid signal @ %s\n", err);
             return;
         }
 
@@ -244,7 +246,7 @@ void _kill_cmd(char *arguments[])
 
     if (strlen(*curr) == 0)
     {
-        printf("kill: invalid process id\n");
+        fprintf(stderr, "kill: invalid process id\n");
         return;
     }
 
@@ -252,7 +254,7 @@ void _kill_cmd(char *arguments[])
 
     if (strlen(err) != 0)
     { // invalid proc_id
-        printf("kill: invalid process id @ %s\n", err);
+        fprintf(stderr, "kill: invalid process id @ %s\n", err);
         return;
     }
 
@@ -335,13 +337,13 @@ void _setenv_cmd(char *arguments[])
     }
 }
 
-void _noclobber(char *arguments[])
+void _noclobber_cmd(char *arguments[])
 {
     b_noclobber = !b_noclobber;
     printf("noclobber: %d\n", b_noclobber);
 }
 
-void _watchuser(char *arguments[])
+void _watchuser_cmd(char *arguments[])
 {
     if (arguments[0] == NULL)
     {
@@ -359,6 +361,55 @@ void _watchuser(char *arguments[])
         printf("Added '%s' to the user watchlist\n", arguments[0]);
         watch_user(arguments[0]);
     }
+}
+
+void _fg_cmd(char *arguments[])
+{
+    int job_pid, status;
+
+    if (arguments[0] == NULL)
+    {
+        job_pid = release_process(1);
+    }
+    else
+    {
+        char *err;
+        job_pid = strtol(arguments[0], &err, 10); // attempt to convert
+
+        if (strlen(err) != 0)
+        { // invalid signal
+            fprintf(stderr, "fg: invalid job id @ %s\n", err);
+            return;
+        }
+
+        job_pid = release_process(job_pid);
+    }
+
+    if (job_pid < 0)
+    {
+        fprintf(stderr, "fg: invalid job id\n");
+        return;
+    }
+
+    printf("Bringing PID %d to the foreground\n", job_pid);
+
+    if (waitpid(job_pid, &status, 0) < 0)
+    {
+        fprintf(stderr, "waitpid error\n");
+        return;
+    }
+
+    if (WIFEXITED(status)) // S&R p. 239
+    {
+        int exitcode = WEXITSTATUS(status);
+        if (exitcode != 0)
+            printf("process terminated with code %d\n", exitcode);
+    }
+}
+
+void _jobs_cmd(char *arguments[])
+{
+    print_jobs();
 }
 
 #pragma endregion
@@ -389,8 +440,10 @@ void setup_builtins()
                                                new_builtin("prompt", &_prompt_cmd),
                                                new_builtin("printenv", &_printenv_cmd),
                                                new_builtin("setenv", &_setenv_cmd),
-                                               new_builtin("noclobber", &_noclobber),
-                                               new_builtin("watchuser", &_watchuser)};
+                                               new_builtin("noclobber", &_noclobber_cmd),
+                                               new_builtin("watchuser", &_watchuser_cmd),
+                                               new_builtin("fg", &_fg_cmd),
+                                               new_builtin("jobs", &_jobs_cmd)};
 
     for (int i = 0; i < BUILTINCOUNT; ++i)
         builtins[i] = tmp[i];
