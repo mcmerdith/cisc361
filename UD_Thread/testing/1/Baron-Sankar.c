@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "mthread.h"
+#include "ud_thread.h"
 
 int threadNum;
 #define BUFFER_SIZE 256

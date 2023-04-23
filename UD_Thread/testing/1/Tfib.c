@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include "mthread.h"
+#include "ud_thread.h"
 
 // this lock is used to ensure mutual exclusion
 // when accessing the fibonacci array across
