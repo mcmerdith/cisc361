@@ -1,0 +1,76 @@
+
+
+Enter number of threads: 6
+
+
+Initializing user-level thread library
+User-level thread library initialized
+
+
+Creating 6 threads
+Created 6 threads
+
+
+Thread 1 yielding
+Thread 0 yielding
+Thread 1 yielding
+Thread 2 yielding
+Thread 3 yielding
+Thread 4 yielding
+Thread 5 yielding
+Thread 6 yielding
+
+Thread 2 yielding
+Thread 0 yielding
+Thread 1 yielding
+Thread 2 yielding
+Thread 3 yielding
+Thread 4 yielding
+Thread 5 yielding
+Thread 6 yielding
+
+Thread 3 yielding
+Thread 0 yielding
+Thread 1 yielding
+Thread 2 yielding
+Thread 3 yielding
+Thread 4 yielding
+Thread 5 yielding
+Thread 6 yielding
+
+Thread 4 yielding
+Thread 0 yielding
+Thread 1 yielding
+Thread 2 yielding
+Thread 3 yielding
+Thread 4 yielding
+Thread 5 yielding
+Thread 6 yielding
+
+Thread 5 yielding
+Thread 0 yielding
+Thread 1 yielding
+Thread 2 yielding
+Thread 3 yielding
+Thread 4 yielding
+Thread 5 yielding
+Thread 6 yielding
+
+Thread 6 yielding
+Thread 0 yielding
+Thread 1 yielding
+Thread 2 yielding
+Thread 3 yielding
+Thread 4 yielding
+Thread 5 yielding
+Thread 6 yielding
+
+
+
+Terminating threads...
+
+
+Shutting down user-level thread library
+User-level thread library shut down
+
+

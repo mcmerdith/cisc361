@@ -1,0 +1,57 @@
+About to initialize library
+Library initialized
+---------------------------------------------------
+About to make 5 threads...
+main creating thread id:1
+main creating thread id:2
+main creating thread id:3
+main creating thread id:4
+main creating thread id:5
+---------------------------------------------------
+5 threads created, about to yield...
+---------------------------------------------------
+Thread id:main	iter:1
+Thread id:1	iter:1
+Thread id:2	iter:1
+Thread id:3	iter:1
+Thread id:4	iter:1
+Thread id:5	iter:1
+---------------------------------------------------
+Thread id:main	iter:2
+Thread id:1	iter:2
+Thread id:2	iter:2
+Thread id:3	iter:2
+Thread id:4	iter:2
+Thread id:5	iter:2
+---------------------------------------------------
+Thread id:main	iter:3
+Thread id:1	iter:3
+Thread id:2	iter:3
+Thread id:3	iter:3
+Thread id:4	iter:3
+Thread id:5	iter:3
+---------------------------------------------------
+Threads about to terminate...
+Thread id:1	terminating
+Thread id:2	terminating
+Thread id:3	terminating
+Thread id:4	terminating
+Thread id:5	terminating
+---------------------------------------------------
+Call yield() in main (no other threads to run)
+After yield() in main
+---------------------------------------------------
+About to make 5 threads...
+main creating thread id:6
+main creating thread id:7
+main creating thread id:8
+main creating thread id:9
+main creating thread id:10
+---------------------------------------------------
+About to invoke t_shutdown()
+After t_shutdown()
+---------------------------------------------------
+Call yield() in main (no other threads to run)
+After yield() in main
+---------------------------------------------------
+TEST COMPLETE
