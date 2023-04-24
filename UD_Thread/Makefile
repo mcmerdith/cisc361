@@ -21,20 +21,21 @@ TEST_OBJS := $(TEST_SRCS:%.c=%.out)
 
 EMPTY := $() $()
 
+all: thread tests
+
 thread: $(OBJS)
 	@echo Linking final executable $@
 	@${CC} -g $(OBJS) -o $@
 
 tests: testdirs $(TEST_OBJS)
-	@echo Compiling all tests
 
-testing/%.out: testing/%.c
+testing/%.out: testing/%.c mthread_lib.c mthread_lib.h
 # Hacky work around for splicing in the directory for test binaries
 	$(eval TEMP := $(subst /, ,$@))
 	$(eval FILE := $(lastword $(TEMP)))
 	$(eval DIR := $(subst $(EMPTY),/,$(filter-out $(FILE), $(TEMP))/bin))
 	@echo Compiling test $<
-	@${CC} -g -I $(shell pwd) t_lib.c $< -o $(DIR)/$(FILE)
+	@${CC} -g -I $(shell pwd) mthread_lib.c $< -o $(DIR)/$(FILE)
 
 ${BINDIR}/%.o: %.c %.h
 	@mkdir -p $(BINDIR)
