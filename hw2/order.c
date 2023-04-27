@@ -4,39 +4,37 @@
 #include <pthread.h>
 #include <semaphore.h>
 
-sem_t t1, t2, t3;
+sem_t first, last;
 
 void *worker1(void *arg)
 {
+  sem_wait(&first);
   printf("I am worker 1\n");
-  sleep(1);
-  sem_post(&t1);
+  sem_post(&last);
   pthread_exit(NULL);
 }
 
 void *worker2(void *arg)
 {
-  sem_wait(&t1);
   printf("I am worker 2\n");
-  sleep(1);
-  sem_post(&t2);
+  sem_post(&first);
+  sem_post(&first);
   pthread_exit(NULL);
 }
 
 void *worker3(void *arg)
 {
-  sem_wait(&t2);
+  sem_wait(&last);
+  sem_wait(&last);
   printf("I am worker 3\n");
-  sleep(1);
-  sem_post(&t3);
   pthread_exit(NULL);
 }
 
 void *worker4(void *arg)
 {
-  sem_wait(&t3);
+  sem_wait(&first);
   printf("I am worker 4\n");
-  sleep(1);
+  sem_post(&last);
   pthread_exit(NULL);
 }
 
@@ -44,9 +42,8 @@ int main(int argc, char *argv[])
 {
   pthread_t p1, p2, p3, p4;
 
-  sem_init(&t1, 0, 0);
-  sem_init(&t2, 0, 0);
-  sem_init(&t3, 0, 0);
+  sem_init(&first, 0, 0);
+  sem_init(&last, 0, 0);
 
   pthread_create(&p3, NULL, worker3, NULL);
   pthread_create(&p4, NULL, worker4, NULL);
