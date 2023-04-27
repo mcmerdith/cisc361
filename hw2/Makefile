@@ -11,17 +11,15 @@ CC=$(BCC) -Wall -Wno-unknown-pragmas -pthread
 
 SRCS := $(wildcard *.c)
 BINDIR = out
-OBJS := $(SRCS:%.c=$(BINDIR)/%.o)
+OBJS := $(SRCS:%.c=$(BINDIR)/%)
 
-mysh: $(OBJS)
-	@echo Linking final executable $@
-	@${CC} -g $(OBJS) -o $@
+all: $(OBJS)
 
-${BINDIR}/%.o: %.c %.h defines.h
+${BINDIR}/%: %.c
 	@mkdir -p $(BINDIR)
 	@echo Compiling $@
-	@${CC} -g -c $< -o $@
+	@${CC} -g $< -o $@
 
 clean:
 	@echo Removing compiled binaries
-	@rm -rf $(BINDIR)/ mysh
+	@rm -rf $(BINDIR)/
