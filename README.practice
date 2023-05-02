@@ -1,0 +1,61 @@
+Practice of adding hello() as a new system call.
+
+1. Edit kernel/syscall.h to add
+#define SYS_hello 22
+
+2. Edit kernel/syscall.c to add
+extern uint64 sys_hello(void);
+and add 
+[SYS_hello]   sys_hello,
+into the array static uint64 (*syscalls[])(void)
+of function pointers.
+
+3. Edit kernel/sysproc.c to add
+
+uint64
+sys_hello(void)
+{
+  printf("* hello world *\n");
+  return 1688;
+}
+
+4. Edit user/usys.pl to add
+entry("hello");
+
+5. Edit user/user.h to add
+int hello(void);
+
+6. Inside user, create hello.c as
+
+#include "kernel/types.h"
+#include "kernel/stat.h"
+#include "user/user.h"
+
+int main(int argc, char **argv)
+{
+  printf("hello returns [%d]\n", hello());
+  exit(0);
+}
+
+7. Edit Makefile to add $U/_hello\ to the end of UPROGS=
+
+8. Type "make qemu" to boot up an Xv6 VM.
+
+.....
+
+xv6 kernel is booting
+
+hart 1 starting
+hart 2 starting
+init: starting sh
+$
+
+9. Run command "hello"
+
+$ hello
+* hello world *
+hello returns [1688]
+
+10. To shutdown the Xv6 VM, type Ctrl-a x.
+
+Also note that the shell of Xv6 sh is not able to recognize an empty/blank command line so that when RETURN is hit, a NULL process is created and terminates right away and the next available pid is increased.
