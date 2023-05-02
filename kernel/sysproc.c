@@ -12,7 +12,7 @@ sys_exit(void)
   int n;
   argint(0, &n);
   exit(n);
-  return 0;  // not reached
+  return 0; // not reached
 }
 
 uint64
@@ -43,7 +43,7 @@ sys_sbrk(void)
 
   argint(0, &n);
   addr = myproc()->sz;
-  if(growproc(n) < 0)
+  if (growproc(n) < 0)
     return -1;
   return addr;
 }
@@ -57,8 +57,10 @@ sys_sleep(void)
   argint(0, &n);
   acquire(&tickslock);
   ticks0 = ticks;
-  while(ticks - ticks0 < n){
-    if(killed(myproc())){
+  while (ticks - ticks0 < n)
+  {
+    if (killed(myproc()))
+    {
       release(&tickslock);
       return -1;
     }
@@ -95,4 +97,34 @@ sys_hello(void)
 {
   printf("* hello world *\n");
   return 1688;
+}
+
+extern struct proc proc[];
+
+uint64
+sys_cps(void)
+{
+  static char *states[] = {
+      [UNUSED] "unused",
+      [USED] "used",
+      [SLEEPING] "sleep ",
+      [RUNNABLE] "runble",
+      [RUNNING] "run   ",
+      [ZOMBIE] "zombie"};
+  struct proc *p;
+  char *state;
+
+  printf("\n");
+  for (p = proc; p < &proc[NPROC]; p++)
+  {
+    if (p->state == UNUSED)
+      continue;
+    if (p->state >= 0 && p->state < NELEM(states) && states[p->state])
+      state = states[p->state];
+    else
+      state = "???";
+    printf("%s %d %s", p->name, p->pid, state);
+    printf("\n");
+  }
+  return 0;
 }
