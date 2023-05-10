@@ -55,13 +55,16 @@ int main(int argc, char *argv[])
 
     sem_init(&first, 0);
     sem_init(&last, 0);
-    sem_init(&complete, -3);
+    sem_init(&complete, 0);
 
     t_create(worker3, 3, 0);
     t_create(worker4, 4, 0);
     t_create(worker2, 2, 0);
     t_create(worker1, 1, 0);
 
+    sem_wait(complete);
+    sem_wait(complete);
+    sem_wait(complete);
     sem_wait(complete);
 
     sem_destroy(&first);
