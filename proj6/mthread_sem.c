@@ -23,7 +23,10 @@ tcb *_sem_dequeue(sem_t *sp)
     tcb *queue = sp->queue;
 
     if (queue)
+    {
         sp->queue = queue->next;
+        queue->next = NULL;
+    }
 
     return queue;
 }

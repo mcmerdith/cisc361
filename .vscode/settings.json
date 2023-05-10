@@ -3,6 +3,8 @@
   "files.associations": {
     "mthread_lib.h": "c",
     "ud_thread.h": "c",
-    "valgrind.h": "c"
+    "valgrind.h": "c",
+    "mthread_sem.h": "c",
+    "stdio.h": "c"
   }
 }
