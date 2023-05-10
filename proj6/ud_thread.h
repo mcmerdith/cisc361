@@ -21,8 +21,10 @@ void t_shutdown(void);
  * semaphore
  */
 
+typedef void sem_t;
+
 // Create a new semaphore pointed to by sp with a count value of sem_count.
-int sem_init(sem_t **sp, int sem_count);
+void sem_init(sem_t **sp, int sem_count);
 
 // Current thread does a wait (P) on the specified semaphore.
 void sem_wait(sem_t *sp);
@@ -35,5 +37,3 @@ void sem_signal(sem_t *sp);
 // Free any memory related to the specified semaphore.
 // If there are queued TCBs, they are moved to the ready queue, and this may imply that the semantics of the application might be incorrect.
 void sem_destroy(sem_t **sp);
-
-typedef void sem_t;

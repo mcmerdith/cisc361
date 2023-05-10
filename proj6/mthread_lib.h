@@ -1,12 +1,12 @@
+#pragma once
+
 /*
  * types used by thread library
  */
-#include "ud_thread.h"
 #include <signal.h>
 
-sigset_t *interrupt_signals;
-
 #ifdef ATOMIC
+extern sigset_t *interrupt_signals;
 #define SIGSETUP(sig_handler)        \
     sigfillset(interrupt_signals);   \
     struct sigaction action;         \
@@ -30,3 +30,9 @@ typedef struct tcb
     int valgrind_stackid;
     struct tcb *next;
 } tcb;
+
+void _add_running_thread(tcb *thread);
+void _add_ready_thread(tcb *thread);
+void _pop_running_queue(int b_remove, int b_make_ready);
+void _pop_ready_to_running();
+void _run_next_task(int b_end_current);

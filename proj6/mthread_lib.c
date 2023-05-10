@@ -1,11 +1,18 @@
+#define ATOMIC
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <ucontext.h>
 #include <sys/mman.h>
 #include "mthread_lib.h"
+#include "ud_thread.h"
 
 #include <valgrind/valgrind.h>
+
+#ifdef ATOMIC
+sigset_t *interrupt_signals;
+#endif
 
 /**
  * Memory Management
@@ -82,10 +89,11 @@ void _add_ready_thread(tcb *thread)
 }
 
 // Pop a thread off the running queue
-// If B_REMOVE, all resources for the TCB will be freed,
-// otherwise the thread will be moved back to the ready queue
+// If B_REMOVE, all resources for the TCB will be freed
+// If B_MAKE_READY the thread will be moved back to the ready queue
+// If neither is set, the caller is responsible for maintaining control of the TCB
 // Note: this does not actually stop running the thread
-void _pop_running_queue(int b_remove)
+void _pop_running_queue(int b_remove, int b_make_ready)
 {
   if (running_queue == NULL)
     return;
@@ -96,7 +104,7 @@ void _pop_running_queue(int b_remove)
 
   if (b_remove)
     _free_tcb(popped);
-  else
+  else if (b_make_ready)
     _add_ready_thread(popped);
 }
 
@@ -116,7 +124,7 @@ void _pop_ready_to_running()
 
 // Run the next task in the ready queue
 // If B_END_CURRENT, the resources associated with the TCB from the running queue will be freed,
-// otherwise, the currently running thread will be moved to the back of the ready queue
+// otherwise, the currently running thread (if any) will be moved to the back of the ready queue
 void _run_next_task(int b_end_current)
 {
   if (ready_queue == NULL) // no next task, let the current one keep running
@@ -132,8 +140,8 @@ void _run_next_task(int b_end_current)
   }
   else
   {
-    tcb *running = running_queue;      // save a reference to the currently running thread
-    _pop_running_queue(b_end_current); // pop it off the queue
+    tcb *running = running_queue;         // save a reference to the currently running thread
+    _pop_running_queue(b_end_current, 1); // pop it off the queue
 
     if (b_end_current)
     {                                      // if we are done with the current thread

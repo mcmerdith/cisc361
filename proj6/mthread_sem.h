@@ -1,7 +1,7 @@
-#include "mthread_lib.h"
+#pragma once
 
 typedef struct sem_t
 {
     int count;
-    tcb *queue;
+    struct tcb *queue;
 } sem_t;
