@@ -1,0 +1,136 @@
+---------------------------------------------------
+About to initialize library
+Library initialized
+---------------------------------------------------
+About to initialize semaphores
+Semaphores initialized
+---------------------------------------------------
+	Synchronization Test
+---------------------------------------------------
+Making sync_wait	thread id:1
+Making sync_signal	thread id:2
+---------------------------------------------------
+Thread id:main	iter:1	yield
+Thread id:1	(wait)	wait
+Thread id:2	iter:1	yield
+---------------------------------------------------
+Thread id:main	iter:2	yield
+Thread id:2	iter:2	yield
+---------------------------------------------------
+Thread id:main	iter:3	yield
+Thread id:2	iter:3	yield
+---------------------------------------------------
+Thread id:main		yield
+Thread id:2	(sig)	signal
+Thread id:2	(sig)	after signal
+Thread id:2	(sig)	yield
+
+	sync_wait should now be woken up
+
+Thread id:main		yield
+Thread id:1	(wait)	after wait
+Thread id:1	(wait)	terminating...
+Thread id:2	(sig)	after yield
+Thread id:2	(sig)	terminating...
+---------------------------------------------------
+	Synchronization Test Complete
+---------------------------------------------------
+---------------------------------------------------
+	Lock Test
+---------------------------------------------------
+About to make 3 lock threads...
+main creating thread id:3
+main creating thread id:4
+main creating thread id:5
+---------------------------------------------------
+Thread id:main	iter:1	yield
+Thread id:3		lock
+Thread id:3	iter:1	yield
+Thread id:4		lock
+Thread id:5		lock
+---------------------------------------------------
+Thread id:main	iter:2	yield
+Thread id:3	iter:2	yield
+---------------------------------------------------
+Thread id:main	iter:3	yield
+Thread id:3	iter:3	yield
+---------------------------------------------------
+Thread id:main	iter:4	yield
+Thread id:3		unlock
+Thread id:3	iter:4	yield
+---------------------------------------------------
+Thread id:main	iter:5	yield
+Thread id:4	iter:1	yield
+Thread id:3		terminating...
+---------------------------------------------------
+Thread id:main	iter:6	yield
+Thread id:4	iter:2	yield
+---------------------------------------------------
+Thread id:main	iter:7	yield
+Thread id:4	iter:3	yield
+---------------------------------------------------
+Thread id:main	iter:8	yield
+Thread id:4		unlock
+Thread id:4	iter:4	yield
+---------------------------------------------------
+Thread id:main	iter:9	yield
+Thread id:5	iter:1	yield
+Thread id:4		terminating...
+---------------------------------------------------
+Thread id:main	iter:10	yield
+Thread id:5	iter:2	yield
+---------------------------------------------------
+Thread id:main	iter:11	yield
+Thread id:5	iter:3	yield
+---------------------------------------------------
+Thread id:main	iter:12	yield
+Thread id:5		unlock
+Thread id:5	iter:4	yield
+---------------------------------------------------
+Thread id:main	iter:13	yield
+Thread id:5		terminating...
+---------------------------------------------------
+Thread id:main	iter:14	yield
+---------------------------------------------------
+Thread id:main	iter:15	yield
+---------------------------------------------------
+	Lock Test Complete
+---------------------------------------------------
+---------------------------------------------------
+	Countdown Test
+---------------------------------------------------
+About to make 6 count threads...
+main creating thread id:6
+main creating thread id:7
+main creating thread id:8
+main creating thread id:9
+main creating thread id:10
+main creating thread id:11
+---------------------------------------------------
+Only 3 threads will be able to make it
+Thread id:6	made it!
+Thread id:7	made it!
+Thread id:8	made it!
+---------------------------------------------------
+Those threads signal & terminate
+Thread id:6	signal & terminate
+Thread id:7	signal & terminate
+Thread id:8	signal & terminate
+---------------------------------------------------
+The rest of the threads make it
+Thread id:9	made it!
+Thread id:10	made it!
+Thread id:11	made it!
+---------------------------------------------------
+The rest of the threads signal & terminate
+Thread id:9	signal & terminate
+Thread id:10	signal & terminate
+Thread id:11	signal & terminate
+---------------------------------------------------
+	Countdown Test Complete
+---------------------------------------------------
+About to destroy semaphores
+Semaphores destroyed
+---------------------------------------------------
+	TEST COMPLETE
+---------------------------------------------------

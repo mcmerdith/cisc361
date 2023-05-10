@@ -1,3 +1,5 @@
+#include "mthread_sem.h"
+
 /*
  * thread library function prototypes
  */
@@ -20,8 +22,6 @@ void t_shutdown(void);
 /**
  * semaphore
  */
-
-typedef void sem_t;
 
 // Create a new semaphore pointed to by sp with a count value of sem_count.
 void sem_init(sem_t **sp, int sem_count);

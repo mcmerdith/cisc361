@@ -90,7 +90,7 @@ void _add_ready_thread(tcb *thread)
 
 // Pop a thread off the running queue
 // If B_REMOVE, all resources for the TCB will be freed
-// If B_MAKE_READY the thread will be moved back to the ready queue
+// otherwise if B_MAKE_READY the thread will be moved back to the ready queue
 // If neither is set, the caller is responsible for maintaining control of the TCB
 // Note: this does not actually stop running the thread
 void _pop_running_queue(int b_remove, int b_make_ready)
@@ -124,8 +124,10 @@ void _pop_ready_to_running()
 
 // Run the next task in the ready queue
 // If B_END_CURRENT, the resources associated with the TCB from the running queue will be freed,
+// otherwise if B_MAKE_READY, the running thread will be moved to the ready queue
+// If neither is set, the caller is responsible for maintaining control of the TCB
 // otherwise, the currently running thread (if any) will be moved to the back of the ready queue
-void _run_next_task(int b_end_current)
+void _run_next_task(int b_end_current, int b_make_ready)
 {
   if (ready_queue == NULL) // no next task, let the current one keep running
     return;
@@ -140,8 +142,8 @@ void _run_next_task(int b_end_current)
   }
   else
   {
-    tcb *running = running_queue;         // save a reference to the currently running thread
-    _pop_running_queue(b_end_current, 1); // pop it off the queue
+    tcb *running = running_queue;                    // save a reference to the currently running thread
+    _pop_running_queue(b_end_current, b_make_ready); // pop it off the queue
 
     if (b_end_current)
     {                                      // if we are done with the current thread
@@ -157,14 +159,14 @@ void _run_next_task(int b_end_current)
 // When a signal is received, run the next ready task
 void _sig_handler(int sig)
 {
-  _run_next_task(0);
+  _run_next_task(0, 1);
 }
 
 void t_yield()
 {
   HOLD();
 
-  _run_next_task(0);
+  _run_next_task(0, 1);
 
   RELEASE();
 }
@@ -212,7 +214,7 @@ void t_terminate()
 {
   HOLD();
 
-  _run_next_task(1); // Run the next task, ending the current one
+  _run_next_task(1, 0); // Run the next task, ending the current one
 
   RELEASE();
 }

@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include "mthread_lib.h"
 #include "mthread_sem.h"
+#include "ud_thread.h"
 
 extern tcb *running_queue; // Queue for running threads
 extern tcb *ready_queue;   // Queue for ready threads
@@ -11,7 +12,7 @@ void _sem_enqueue(sem_t *sp, tcb *_tcb)
 {
     tcb **queue = &sp->queue;
 
-    while (queue != NULL)
+    while (*queue != NULL)
         queue = &(*queue)->next;
 
     *queue = _tcb;
@@ -44,9 +45,8 @@ void sem_wait(sem_t *sp)
     // otherwise they'll have to wait
 
     _sem_enqueue(sp, running_queue); // add the running thread to the waiting queue
-    _pop_running_queue(0, 0);        // pop the running thread off the queue and take control of the TCB
 
-    _run_next_task(0);
+    _run_next_task(0, 0);
 }
 
 void sem_signal(sem_t *sp)
@@ -65,6 +65,7 @@ void sem_destroy(sem_t **sp)
     tcb *queued = (*sp)->queue;
     while (queued != NULL)
     {
+        printf("A thread was waiting when a semaphore was destroyed, this likely indicates a semantic problem with your application\n");
         _add_ready_thread(queued);
         queued = queued->next;
     }

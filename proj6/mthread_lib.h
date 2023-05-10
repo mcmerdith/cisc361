@@ -35,4 +35,4 @@ void _add_running_thread(tcb *thread);
 void _add_ready_thread(tcb *thread);
 void _pop_running_queue(int b_remove, int b_make_ready);
 void _pop_ready_to_running();
-void _run_next_task(int b_end_current);
+void _run_next_task(int b_end_current, int b_make_ready);

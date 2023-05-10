@@ -35,7 +35,7 @@ testing/%.out: testing/%.c mthread_lib.c mthread_lib.h
 	$(eval FILE := $(lastword $(TEMP)))
 	$(eval DIR := $(subst $(EMPTY),/,$(filter-out $(FILE), $(TEMP))/bin))
 	@echo Compiling test $<
-	@${CC} -g -I $(shell pwd) mthread_lib.c $< -o $(DIR)/$(FILE)
+	@${CC} -g -I $(shell pwd) mthread_lib.c mthread_sem.c $< -o $(DIR)/$(FILE)
 
 ${BINDIR}/%.o: %.c %.h
 	@mkdir -p $(BINDIR)
