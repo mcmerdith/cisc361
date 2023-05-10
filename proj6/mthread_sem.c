@@ -56,6 +56,9 @@ void sem_signal(sem_t *sp)
 {
     ++sp->count;
 
+    if (sp->count < 0)
+        return;
+
     tcb *queued = _sem_dequeue(sp);
 
     if (queued)
