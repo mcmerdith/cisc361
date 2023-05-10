@@ -1,8 +1,6 @@
 {
   "editor.defaultFormatter": "ms-vscode.cpptools",
   "files.associations": {
-    "signal.h": "c",
-    "mman.h": "c",
-    "valgrind.h": "c"
+    "mthread_lib.h": "c"
   }
 }
