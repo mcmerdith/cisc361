@@ -1,0 +1,9 @@
+Producer (1): [hello world... - tid 1] [length=22]
+Producer (1): [bye, bye - tid 1] [length=16]
+Producer (2): [hello world... - tid 2] [length=22]
+Producer (2): [bye, bye - tid 2] [length=16]
+Message from mailbox: [hello world... - tid 1]
+Message from mailbox: [bye, bye - tid 1]
+Message from mailbox: [hello world... - tid 2]
+Message from mailbox: [bye, bye - tid 2]
+Done with mailbox test...

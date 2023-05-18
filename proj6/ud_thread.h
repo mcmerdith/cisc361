@@ -1,4 +1,5 @@
 #include "mthread_sem.h"
+#include "mthread_message.h"
 
 /*
  * thread library function prototypes
@@ -37,3 +38,11 @@ void sem_signal(sem_t *sp);
 // Free any memory related to the specified semaphore.
 // If there are queued TCBs, they are moved to the ready queue, and this may imply that the semantics of the application might be incorrect.
 void sem_destroy(sem_t **sp);
+
+void mbox_create(mbox **mb);
+void mbox_destroy(mbox **mb);
+void mbox_deposit(mbox *mb, char *message, int len);
+void mbox_withdraw(mbox *mb, char *message, int *len);
+
+void send(int tid, char *message, int len);
+void receive(int *tid, char *message, int *len);
