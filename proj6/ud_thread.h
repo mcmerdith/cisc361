@@ -39,10 +39,27 @@ void sem_signal(sem_t *sp);
 // If there are queued TCBs, they are moved to the ready queue, and this may imply that the semantics of the application might be incorrect.
 void sem_destroy(sem_t **sp);
 
+// Create a mailbox pointed to by MB
 void mbox_create(mbox **mb);
+
+// Destroy any state related to the mailbox pointed to by MB
 void mbox_destroy(mbox **mb);
+
+// Deposit message MESSAGE of length LEN into the mailbox pointed to by MB
 void mbox_deposit(mbox *mb, char *message, int len);
+
+// Withdraw the first message from the mailbox pointed to by MB into MESSAGE and set the messages length in LEN
+// The caller is responsible for allocating a buffer for MESSAGE
+// If there is no message, LEN will be set to 0. Caller will NOT be blocked
+// Only one message is returned per call and are retrieved in the order deposited
 void mbox_withdraw(mbox *mb, char *message, int *len);
 
+// Send a message to the thread whose tid is TID. MESSAGE is the message and LEN specifies the length
 void send(int tid, char *message, int len);
+
+// Wait for a receive a message from another thread. Specify the thread to receive from in TID or provide 0 to receive from any thread
+// If no messages are ready, the caller will be blocked until a message is available
+// The message will be stored in MESSAGE and the length in LEN
+// The caller is responsible for allocating a buffer for MESSAGE
+// Only one message is returned per call and are retrieved in the order deposited
 void receive(int *tid, char *message, int *len);

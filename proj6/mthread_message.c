@@ -54,7 +54,6 @@ void mbox_create(mbox **mb)
 
 void mbox_destroy(mbox **mb)
 {
-
     _free_message_queue((*mb)->message_queue); // Cleanup the queue
     sem_destroy(&(*mb)->mbox_sem);             // Cleanup the semaphore
 }
@@ -176,13 +175,16 @@ read_queue:
         goto read_queue;               // When a new message is ready, reread the queue
     }
 
+    // Move our return values
     strcpy(message, (*current)->message);
     *len = (*current)->len;
     *tid = (*current)->sender;
 
+    // Remove this message from the queue
     message_node *temp = *current;
     *current = (*current)->next;
     _free_message(temp);
 
+    // Release our lock
     sem_signal(message_lock);
 }
